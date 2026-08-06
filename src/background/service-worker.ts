@@ -200,13 +200,16 @@ export async function handleMessage(
       return { ok: true };
     }
     case 'CLEAR_HIGHLIGHT': {
+      const stored = await getHighlightTab();
+      if (stored != null) {
+        await chrome.scripting
+          .executeScript({
+            target: { tabId: stored },
+            func: clearHighlightInPage,
+          })
+          .catch(() => {});
+      }
       void setHighlightTab(null);
-      await chrome.scripting
-        .executeScript({
-          target: { tabId: message.tabId },
-          func: clearHighlightInPage,
-        })
-        .catch(() => {});
       return { ok: true };
     }
     case 'SET_TEXT_SPACING': {

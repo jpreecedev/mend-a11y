@@ -7,7 +7,7 @@ export type PanelMessage =
   | { type: 'RUN_AUDIT'; tabId: number }
   | { type: 'GET_CACHED_AUDIT'; tabId: number }
   | { type: 'HIGHLIGHT'; tabId: number; selector: string }
-  | { type: 'CLEAR_HIGHLIGHT'; tabId: number }
+  | { type: 'CLEAR_HIGHLIGHT' }
   | { type: 'SET_TEXT_SPACING'; tabId: number; enabled: boolean }
   | { type: 'GET_TEXT_SPACING'; tabId: number }
   | { type: 'SET_FOCUS_ORDER'; tabId: number; enabled: boolean }
