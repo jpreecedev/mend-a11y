@@ -14,6 +14,7 @@ import {
 import { DEFAULT_SETTINGS } from '../lib/storage';
 import { normalizeDashboardUrl, syncConfigured } from '../lib/sync';
 import type { SyncInfo } from './components/SyncStatus';
+import { clearErrorEntries } from './syncState';
 import { defaultFilters, type FilterState } from './screens/filterState';
 import { EmptyScreen } from './screens/EmptyScreen';
 import { RunningScreen } from './screens/RunningScreen';
@@ -497,6 +498,15 @@ export function App() {
     if (syncStates[auditKey]) return;
     void uploadForTab(tabId, auditKey);
   }, [autoSync, tabId, auditKey, syncStates, uploadForTab]);
+
+  // A refusal recorded under one key must not keep blocking after the key
+  // changes -- the key that earned the 401 is gone, so the refusal no longer
+  // says anything about whether the new one will work. Dropping error
+  // entries here lets the auto-upload effect's guard pass again and retry.
+  const apiKey = settings.dashboardApiKey;
+  useEffect(() => {
+    setSyncStates(clearErrorEntries);
+  }, [apiKey]);
 
   const saveToDashboard = useCallback(() => {
     if (tabId == null || auditKey == null) return;
