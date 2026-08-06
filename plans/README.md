@@ -16,17 +16,17 @@ starting, honor its STOP conditions, and update your row when done.
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| [010](010-panel-tab-state.md) | Make the panel's per-tab result state track reality | P1 | M | — | IN PROGRESS |
-| [011](011-highlight-orphan.md) | Clear the highlight overlay on the tab that actually has it | P1 | S | — | TODO |
+| [010](010-panel-tab-state.md) | Make the panel's per-tab result state track reality | P1 | M | — | DONE 2026-08-06 — merged `734f2aa` (executor `2056e23`). Pure helpers extracted to `hooks/tabResults.ts` (fold reducer with `url\|startedAt` value keys + deletion gated on `!loading`; `shouldResolveForUpdate`; sequencer), `onUpdated` filtered to the active tab, both `setState` paths in `resolve()` token-guarded. 11 new checks in `test/activeTab.test.ts`. Note: smoke suite is 4 checks, not the 3 the plan tables said — plan expectation was stale, suite untouched |
+| [011](011-highlight-orphan.md) | Clear the highlight overlay on the tab that actually has it | P1 | S | — | DONE 2026-08-06 — merged (executor `6c59120`). Worker resolves `getHighlightTab()` before nulling; `CLEAR_HIGHLIGHT` carries no tabId; `clearHighlight` is now a stable callback; 10 checks in `test/highlight-clear.test.ts`. Manual A/B-tab walk still worth one human pass |
 | [012](012-message-channel-hardening.md) | Validate senders and constrain the dashboard-key relay | P1 | M | — | TODO |
-| [013](013-docs-truth-pass.md) | Make the repo's own documents tell the truth | P1 | S | — | TODO |
+| [013](013-docs-truth-pass.md) | Make the repo's own documents tell the truth | P1 | S | — | DONE 2026-08-06 — merged (executor `31389ad`+`4dedf02`). README privacy describes auto-save honestly (and keeps the true zero-requests-by-default claim); CONTRIBUTING carries the real egress invariant; CLAUDE.md created (69 lines); pnpm files deleted, `packageManager: npm@11.16.0` pinned; contract test gained `EXPECTED_CONTRACT_VERSION` + inverse guard. CODE_OF_CONDUCT link dropped rather than inventing the file |
 | [014](014-sync-retry-recovery.md) | Stop a doomed first upload from permanently blocking an audit's save | P1 | S | — | TODO |
 | [015](015-audit-lifecycle-tests.md) | Characterization tests around the audit lifecycle | P1 | M | — | TODO |
 | [016](016-partial-audit-honesty.md) | Surface partial audits; make partial detection real | P2 | S | 015 | TODO |
 | [017](017-verify-engine-ships.md) | Fail the build loudly when the vendored engine is missing | P2 | S | — | REJECTED — the finding's premise was disproven by the plan's own Step-1 reproduction (2026-08-06): with `public/vendor/axe.min.js` removed, `npm run build` already fails loudly (`[crx:manifest-post] ENOENT` from @crxjs/vite-plugin resolving the web_accessible_resources entry), so no silent engine-less zip can reach CI's package step. Residual gaps (hand-edited dist/, truncated-but-present engine file) judged too narrow to plan. No code changed |
-| [018](018-panel-self-audit.md) | Audit the auditor: engine run against the panel in smoke | P2 | S | — | TODO |
+| [018](018-panel-self-audit.md) | Audit the auditor: engine run against the panel in smoke | P2 | S | — | IN PROGRESS |
 | [019](019-local-export.md) | Local JSON export for keyless users | P3 | S–M | — (sequence after 016) | TODO |
-| [020](020-docs-corpus-expansion.md) | Expand the docs corpus beyond the v1 twenty | P3 | M–L | — | IN PROGRESS |
+| [020](020-docs-corpus-expansion.md) | Expand the docs corpus beyond the v1 twenty | P3 | M–L | — | DONE 2026-08-06 — merged (executor `6bb9470`+`2280e3e`+`eb0ed36`, one revision round). 35 entries; every before/after verified against the vendored engine via a Puppeteer harness. Two planned rules replaced after verification: `th-has-data-cells` (incomplete-typed — Mend surfaces violations only) and `scrollable-region-focusable` (Safari-only in axe 4.11 per its own description; NOTE: executor's independent probe saw it fire once in headless Chrome where reviewer's probes saw it never match — conflicting evidence, treated as too unreliable to document) → `input-image-alt` + `area-alt`. `input-button-name` example corrected (bare type=submit passes via browser-default name) |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale)
 
