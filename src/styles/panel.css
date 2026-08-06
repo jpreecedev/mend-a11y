@@ -349,6 +349,12 @@ pre {
   flex-shrink: 0;
   margin-top: 1px;
 }
+/* .results-head has no horizontal inset of its own (unlike .center-stage),
+   so a banner placed right after it needs its own gutter and spacing. */
+.results-head + .warning-banner {
+  width: auto;
+  margin: 0 14px 14px;
+}
 
 /* ---------- running ---------- */
 .progress-track {

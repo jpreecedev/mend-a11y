@@ -43,7 +43,7 @@ const tabsGet = async (_tabId: number): Promise<{ url: string }> => {
 // --- chrome.scripting.executeScript: a dispatcher keyed on call shape (files
 // vs func, allFrames vs not), each independently configurable per case. ---
 type ScriptOutcome =
-  | { kind: 'resolve'; value: Array<{ frameId?: number; result?: unknown }> }
+  | { kind: 'resolve'; value: Array<{ frameId?: number; result?: unknown; error?: unknown }> }
   | { kind: 'reject'; error: Error }
   | { kind: 'never' };
 
@@ -186,7 +186,9 @@ async function main(): Promise<void> {
   ok('the top-frame fallback sets a partialReason', typeof result6.partialReason === 'string' && result6.partialReason.length > 0);
 
   // --- 7) a frame reports result: null -> partial is pinned true.
-  // Pins current behavior; plan 016 investigates whether this predicate ever fires in real Chrome.
+  // plan 016 landed: probed live against Chrome 148 and confirmed this is a
+  // real failure shape (a script-blocked sandboxed frame reports exactly
+  // this), so the predicate keeps treating it as partial.
   reset();
   tabUrlQueue = ['https://example.com'];
   allFramesFilesOutcome = {
@@ -200,10 +202,14 @@ async function main(): Promise<void> {
   const result7 = await runAudit(7);
   ok('a non-top frame reporting result: null marks the audit partial (current predicate)', result7.partial === true);
 
-  // --- 8) a frame reports result: undefined (the suspected real error shape
-  // for a `files:` injection) -> the predicate does NOT catch it; partial is
-  // pinned false. Pins current behavior; plan 016 investigates whether this
-  // predicate ever fires in real Chrome.
+  // --- 8) a frame reports result: undefined -> now ALSO marks partial.
+  // plan 016 landed: the live probe never reproduced undefined as a failure
+  // shape (successful frames returned `true`, the file's completion value),
+  // but a `files:` injection's completion value is inherently shape-
+  // dependent, so a future axe.min.js bundle could complete `undefined` on
+  // success too. The predicate now treats undefined on a non-top frame as a
+  // failure signal anyway: overstating audit coverage is worse than an
+  // occasional false "partial".
   reset();
   tabUrlQueue = ['https://example.com'];
   allFramesFilesOutcome = {
@@ -215,7 +221,34 @@ async function main(): Promise<void> {
   };
   funcRunOutcome = { kind: 'resolve', value: [{ result: rawResult }] };
   const result8 = await runAudit(8);
-  ok('a non-top frame reporting result: undefined is NOT flagged partial today (current predicate blind spot)', result8.partial === false);
+  ok('a non-top frame reporting result: undefined now also marks the audit partial (plan 016)', result8.partial === true);
+
+  // --- 8b) a frame reports an `error` property (not present in the
+  // installed @types/chrome for chrome.scripting.InjectionResult, and never
+  // observed live in Chrome 148 for this API — but checked as defense in
+  // depth via a structural cast in case a future Chrome version adds it).
+  reset();
+  tabUrlQueue = ['https://example.com'];
+  allFramesFilesOutcome = {
+    kind: 'resolve',
+    value: [
+      { frameId: 0, result: undefined },
+      { frameId: 7, error: 'Frame was detached before injection completed.' },
+    ],
+  };
+  funcRunOutcome = { kind: 'resolve', value: [{ result: rawResult }] };
+  const result8b = await runAudit(13);
+  ok('a non-top frame reporting an error property marks the audit partial (plan 016)', result8b.partial === true);
+
+  // --- 8c) the single-frame happy path (top frame only, result: undefined)
+  // must stay partial: false — frameId 0 is exempt from the per-frame check
+  // exactly as before plan 016.
+  reset();
+  tabUrlQueue = ['https://example.com'];
+  allFramesFilesOutcome = { kind: 'resolve', value: [{ frameId: 0, result: undefined }] };
+  funcRunOutcome = { kind: 'resolve', value: [{ result: rawResult }] };
+  const result8c = await runAudit(14);
+  ok('a single top-frame result: undefined is still NOT flagged partial (top frame exempt)', result8c.partial === false);
 
   // --- 9) both injections fail with generic (unclassifiable) errors ---
   reset();
