@@ -23,6 +23,7 @@ import { FocusOrderIcon, OutlineIcon, SettingsIcon, TextSpacingIcon, VisionIcon 
 import { announce } from './hooks/a11y';
 import { useThemeClass } from './hooks/theme';
 import { useActiveTab } from './hooks/activeTab';
+import { foldCachedAudit } from './hooks/tabResults';
 import { hasAllSitesAccess, requestAllSitesAccess, revokeAllSitesAccess } from '../lib/permissions';
 import type { VisionMode } from '../lib/vision';
 
@@ -164,14 +165,15 @@ export function App() {
     };
   }, []);
 
-  // Fold a tab's cached audit (from the active-tab hook) into the result map.
+  // Fold a tab's cached audit (from the active-tab hook) into the result map,
+  // in both directions: add/replace when a fresh audit lands, and delete when
+  // the worker's cache has gone empty for that tab (typically a navigation) —
+  // otherwise a navigated-away audit keeps being shown as if it still
+  // described the current page. See tabResults.ts for the value-key
+  // comparison and the loading guard that keeps this from over-clearing.
   useEffect(() => {
-    if (active.tabId != null && active.cached) {
-      const id = active.tabId;
-      const cached = active.cached;
-      setResultsByTab((prev) => (prev[id] === cached ? prev : { ...prev, [id]: cached }));
-    }
-  }, [active.tabId, active.cached]);
+    setResultsByTab((prev) => foldCachedAudit(prev, active.tabId, active.cached, active.loading));
+  }, [active.tabId, active.cached, active.loading]);
 
   // Drive the visible route from the active tab. Switching tabs shows that
   // tab's result, or its empty state if it hasn't been audited. We don't
