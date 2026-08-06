@@ -190,8 +190,44 @@ export async function runAudit(tabId: number): Promise<AuditResult> {
       world: 'MAIN',
       files: ['vendor/axe.min.js'],
     });
-    // A frame that errored shows up with a null result.
-    if (injected.some((frame) => frame.result === null && frame.frameId !== 0)) {
+    // What real Chrome returns for a failed frame (plan 016): probed live
+    // against Chrome 148.0.7778.97 with a locally-built copy of this
+    // extension, injecting into a page with a script-blocked frame
+    // (sandbox="" with no allow-scripts) alongside normal, about:blank, and
+    // cross-origin frames. Findings:
+    //  - The blocked frame reported `{ frameId, documentId, result: null }`
+    //    — the existing null check is real and does fire for a genuine
+    //    per-frame injection failure, not just a theoretical case.
+    //  - No frame, success or failure, ever carried an `error` property.
+    //    `chrome.scripting.InjectionResult` in the installed @types/chrome
+    //    has no `error` field at all; a newer `error` field exists only on
+    //    the unrelated `chrome.userScripts.InjectionResult` type (marked
+    //    "@since Chrome 135" in node_modules/@types/chrome), a different
+    //    API this extension does not use. We still check for it below via a
+    //    structural cast, as defense in depth in case a future Chrome
+    //    version backports it here — but it was not observed to ever fire.
+    //  - Successful frames (top frame, same-origin iframe, about:blank
+    //    iframe, cross-origin iframe) all reported `result: true` (the
+    //    script's own completion value), never `undefined`. `undefined` was
+    //    not reproduced as a real failure shape in this Chrome version.
+    //    Even so, a `files:` injection's completion value depends on the
+    //    last statement of the injected file — a harmless future change to
+    //    axe.min.js's bundle shape could make a SUCCESSFUL frame complete
+    //    with `undefined` too, so `undefined` is inherently ambiguous here.
+    //    We choose to treat it as a failure signal for non-top frames
+    //    anyway: for an accessibility auditor, overstating coverage (a
+    //    false "complete") is worse than a false "partial".
+    // Residual blind spot (accepted, not fixable by per-entry inspection): a
+    // frame that fails hard enough to be omitted from the returned array
+    // entirely — rather than appearing with a null/undefined/error entry —
+    // is invisible to this check. Detecting that would require comparing
+    // against a separate frame enumeration (e.g. webNavigation), which this
+    // extension does not have permission for and this plan does not add.
+    const failed = (frame: chrome.scripting.InjectionResult): boolean => {
+      const withError = frame as chrome.scripting.InjectionResult & { error?: unknown };
+      return withError.error != null || frame.result === null || frame.result === undefined;
+    };
+    if (injected.some((frame) => frame.frameId !== 0 && failed(frame))) {
       partial = true;
     }
   } catch (frameErr) {

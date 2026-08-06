@@ -5,6 +5,7 @@ import { SevMark, severityLabel } from '../components/Severity';
 import { RefreshIcon, ChevronRight, CheckIcon, FilterIcon, UploadIcon } from '../components/Icon';
 import { SyncStatus, type SyncInfo } from '../components/SyncStatus';
 import { AccountPrompt } from '../components/AccountPrompt';
+import { PartialBanner } from '../components/PartialBanner';
 
 export type SaveState = 'idle' | 'saving' | 'saved';
 
@@ -111,6 +112,8 @@ export function ResultsScreen({
           {sync && onRetrySync && <SyncStatus sync={sync} onRetry={onRetrySync} />}
         </div>
       </div>
+
+      <PartialBanner result={result} />
 
       {prompt && <AccountPrompt onSave={prompt.onSave} onDismiss={prompt.onDismiss} />}
 

@@ -3,6 +3,7 @@ import { CheckIcon, RefreshIcon, ShieldIcon, UploadIcon } from '../components/Ic
 import { Pip } from '../components/Pip';
 import { SyncStatus, type SyncInfo } from '../components/SyncStatus';
 import { AccountPrompt } from '../components/AccountPrompt';
+import { PartialBanner } from '../components/PartialBanner';
 import type { AccountPromptActions, SaveState } from './ResultsScreen';
 
 const PASSED_AREAS = [
@@ -42,6 +43,7 @@ export function PassScreen({
         No automated WCAG issues found across {result.totalChecks.toLocaleString()} checks. A clean
         automated pass is a great sign; remember some criteria still need a human eye.
       </p>
+      <PartialBanner result={result} />
       <div class="pass-pills">
         {PASSED_AREAS.map((a) => (
           <span class="pass-pill" key={a}>
