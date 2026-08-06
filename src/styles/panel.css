@@ -454,6 +454,9 @@ pre {
   display: flex;
   gap: 8px;
   margin-top: 12px;
+  /* Up to 4 actions (Re-run, Filters, Export, Save/sync status) can exceed
+     the panel's minimum width; wrapping beats clipping -- plan 019. */
+  flex-wrap: wrap;
 }
 
 .tiles {

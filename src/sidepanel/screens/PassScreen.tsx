@@ -1,5 +1,5 @@
 import type { AuditResult } from '../../lib/types';
-import { CheckIcon, RefreshIcon, ShieldIcon, UploadIcon } from '../components/Icon';
+import { CheckIcon, DownloadIcon, RefreshIcon, ShieldIcon, UploadIcon } from '../components/Icon';
 import { Pip } from '../components/Pip';
 import { SyncStatus, type SyncInfo } from '../components/SyncStatus';
 import { AccountPrompt } from '../components/AccountPrompt';
@@ -18,6 +18,7 @@ const PASSED_AREAS = [
 export function PassScreen({
   result,
   onRerun,
+  onExport,
   onSave,
   saveState = 'idle',
   sync,
@@ -26,6 +27,8 @@ export function PassScreen({
 }: {
   result: AuditResult;
   onRerun: () => void;
+  /** Always present -- local JSON export needs no dashboard account. */
+  onExport: () => void;
   /** Present only when a key is configured but auto-save is turned off; a clean pass is worth recording too. */
   onSave?: () => void;
   saveState?: SaveState;
@@ -54,6 +57,15 @@ export function PassScreen({
       <button class="btn block" onClick={onRerun} style={{ maxWidth: '200px' }}>
         <RefreshIcon />
         Re-run
+      </button>
+      <button
+        class="btn block"
+        onClick={onExport}
+        style={{ maxWidth: '200px' }}
+        aria-label="Export this audit as JSON"
+      >
+        <DownloadIcon />
+        Export JSON
       </button>
       {onSave && (
         <button

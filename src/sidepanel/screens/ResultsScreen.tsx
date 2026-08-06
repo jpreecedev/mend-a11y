@@ -2,7 +2,14 @@ import { useMemo, useState } from 'preact/hooks';
 import type { AuditResult, Impact, NormalizedIssue } from '../../lib/types';
 import { groupByRule } from '../../lib/normalize';
 import { SevMark, severityLabel } from '../components/Severity';
-import { RefreshIcon, ChevronRight, CheckIcon, FilterIcon, UploadIcon } from '../components/Icon';
+import {
+  RefreshIcon,
+  ChevronRight,
+  CheckIcon,
+  FilterIcon,
+  UploadIcon,
+  DownloadIcon,
+} from '../components/Icon';
 import { SyncStatus, type SyncInfo } from '../components/SyncStatus';
 import { AccountPrompt } from '../components/AccountPrompt';
 import { PartialBanner } from '../components/PartialBanner';
@@ -32,6 +39,7 @@ export function ResultsScreen({
   onOpenIssue,
   onRerun,
   onOpenFilters,
+  onExport,
   onSave,
   saveState = 'idle',
   sync,
@@ -42,6 +50,8 @@ export function ResultsScreen({
   onOpenIssue: (id: string) => void;
   onRerun: () => void;
   onOpenFilters: () => void;
+  /** Always present -- local JSON export needs no dashboard account. */
+  onExport: () => void;
   /** Present only when a key is configured but auto-save is turned off. */
   onSave?: () => void;
   saveState?: SaveState;
@@ -95,6 +105,10 @@ export function ResultsScreen({
           <button class="btn small" onClick={onOpenFilters}>
             <FilterIcon size={14} />
             Filters
+          </button>
+          <button class="btn small" onClick={onExport} aria-label="Export this audit as JSON">
+            <DownloadIcon size={14} />
+            Export
           </button>
           {onSave && (
             <button

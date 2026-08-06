@@ -13,6 +13,7 @@ import {
 } from '../lib/messages';
 import { DEFAULT_SETTINGS } from '../lib/storage';
 import { normalizeDashboardUrl, syncConfigured } from '../lib/sync';
+import { exportAudit } from './export';
 import type { SyncInfo } from './components/SyncStatus';
 import { clearErrorEntries } from './syncState';
 import { defaultFilters, type FilterState } from './screens/filterState';
@@ -540,6 +541,22 @@ export function App() {
     updateSettings({ ...settings, accountPromptDismissed: true });
   }, [settings, updateSettings]);
 
+  // Local JSON export: the one way a keyless user gets an audit out of the
+  // panel. Available unconditionally -- unlike Save, it never depends on
+  // syncEnabled. Title resolution mirrors the worker's SAVE_TO_DASHBOARD
+  // case: chrome.tabs.get with a same fallback to the audit's URL.
+  const exportResult = useCallback(async () => {
+    if (result == null) return;
+    const tab = tabId != null ? await chrome.tabs.get(tabId).catch(() => null) : null;
+    const { name, json } = exportAudit(result, tab?.title ?? result.url);
+    const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    a.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+  }, [result, tabId]);
+
   const prompt = showAccountPrompt
     ? { onSave: saveAudit, onDismiss: dismissPrompt }
     : undefined;
@@ -617,6 +634,7 @@ export function App() {
             onOpenIssue={openIssue}
             onRerun={() => void runAudit()}
             onOpenFilters={() => setShowFilters(true)}
+            onExport={() => void exportResult()}
             onSave={syncEnabled && !autoSync ? saveToDashboard : undefined}
             saveState={saveState}
             sync={autoSync ? syncInfo : undefined}
@@ -628,6 +646,7 @@ export function App() {
           <PassScreen
             result={result}
             onRerun={() => void runAudit()}
+            onExport={() => void exportResult()}
             onSave={syncEnabled && !autoSync ? saveToDashboard : undefined}
             saveState={saveState}
             sync={autoSync ? syncInfo : undefined}
