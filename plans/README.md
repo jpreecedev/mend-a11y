@@ -1,6 +1,91 @@
 # Plans
 
-Empty by design; retired plans are summarized below. The six animation plans from the
+Two kinds of content live here: the **active advisor generation (010–020)**
+below, and the historical record of retired plans (001–009 and the animation
+pass) further down.
+
+## Advisor generation 010–020 (planned at `6b2f01f`, 2026-08-06)
+
+Produced by a full `improve` audit at v0.8.0 (four category passes:
+correctness, security, perf+tests, debt/deps/DX/docs — every finding vetted
+against the source before planning). Execute in numeric order unless the
+dependency notes say otherwise. Each executor: read the plan fully before
+starting, honor its STOP conditions, and update your row when done.
+
+### Execution order & status
+
+| Plan | Title | Priority | Effort | Depends on | Status |
+|------|-------|----------|--------|------------|--------|
+| [010](010-panel-tab-state.md) | Make the panel's per-tab result state track reality | P1 | M | — | TODO |
+| [011](011-highlight-orphan.md) | Clear the highlight overlay on the tab that actually has it | P1 | S | — | TODO |
+| [012](012-message-channel-hardening.md) | Validate senders and constrain the dashboard-key relay | P1 | M | — | TODO |
+| [013](013-docs-truth-pass.md) | Make the repo's own documents tell the truth | P1 | S | — | TODO |
+| [014](014-sync-retry-recovery.md) | Stop a doomed first upload from permanently blocking an audit's save | P1 | S | — | TODO |
+| [015](015-audit-lifecycle-tests.md) | Characterization tests around the audit lifecycle | P1 | M | — | TODO |
+| [016](016-partial-audit-honesty.md) | Surface partial audits; make partial detection real | P2 | S | 015 | TODO |
+| [017](017-verify-engine-ships.md) | Fail the build loudly when the vendored engine is missing | P2 | S | — | TODO |
+| [018](018-panel-self-audit.md) | Audit the auditor: engine run against the panel in smoke | P2 | S | — | TODO |
+| [019](019-local-export.md) | Local JSON export for keyless users | P3 | S–M | — (sequence after 016) | TODO |
+| [020](020-docs-corpus-expansion.md) | Expand the docs corpus beyond the v1 twenty | P3 | M–L | — | TODO |
+
+Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale)
+
+### Dependency notes
+
+- **016 requires 015**: the partial-frame predicate change flips two
+  characterization checks that 015 writes; changing the predicate untested is
+  exactly what 015 exists to prevent.
+- **010, 014, 016, 019 all touch `App.tsx` and/or the results screens** in
+  disjoint regions; whichever lands later must re-read the live file (each
+  plan's drift check says so) rather than trusting quoted line numbers.
+- **017 and 018 are complementary, not redundant**: 017 guards the packaging
+  path (file exists, plausible size), 018 guards runtime (the engine actually
+  runs — against the panel itself).
+- 011 slightly reduces churn that 010 also touches (a `clearHighlight`
+  dependency); land 011 before or after 010 freely — the overlap is
+  one callback's dependency array.
+
+### Findings considered and not planned this round
+
+Recorded so they aren't re-audited from scratch. Fix-worthy but unselected
+(available for a future generation): unhandled `sendToWorker` rejections at
+~6 panel call sites (settings writes silently lost on worker cold start);
+per-node duplication of docs explanations in `AuditResult` (~MB-scale payload
+bloat at high issue counts; fix must keep the ingest wire shape); whole-object
+settings writes racing the key relay; engine re-injection on every run/re-run
+(no `window.axe` probe); highlight rAF loop's 60fps forced-layout read while
+idle; unwindowed occurrence lists on group expansion; single `auditDone` flag
+lying across concurrent multi-tab audits; dead "Highlight style" setting
+(writes a field nothing reads); upload endpoint accepting `http://` with no
+host allowlist; page-controlled `helpUrl` rendered as href without a scheme
+allowlist; `use_dynamic_url: false` fingerprinting surface; dev-toolchain
+`npm audit` highs + the Vite 6→7 major (gated on `@crxjs` peer range); no
+linter (type-aware `no-floating-promises` would catch the rejection bugs
+mechanically); test-runner consolidation (12 `&&`-chained tsx scripts,
+duplicated harnesses — becomes urgent the day UI component tests are wanted);
+`App.tsx` decomposition and the 4-way overlay-toggle duplication (blocked on
+better test cover first); schema-validating MAIN-world runner results before
+caching/upload.
+
+**Rejected outright** (not worth doing, with reasoning):
+- Panel bundle-splitting — already route-split; built chunks are small (panel
+  entry ~51 KB, docs chunk ~16 KB).
+- Type-escape-hatch cleanup — zero `@ts-ignore`/`@ts-expect-error` in `src/`;
+  the seven `as unknown as` casts are the unavoidable typed-window pattern
+  for injected page functions.
+- Integrity-hashing the vendored engine copy — `npm ci` + the lockfile's
+  integrity field already pin the package.
+- Root-level zips/extracted-dir litter — gitignored working-directory files,
+  not repo state. (Caveat noted in audit: the `.gitignore` `mend-a11y-*` glob
+  is unanchored and would silently untrack a future `mend-a11y-*` source
+  file; narrow it if it ever bites.)
+- Replacing the tsx-script test style *as such* — no concrete isolation
+  failure found; consolidation is listed above on its own merits, not as a
+  correctness fix.
+
+## Retired plans (001–009)
+
+Retired plans are summarized below. The six animation plans from the
 `improve-animations` pass at `834f519` were all applied in commit `0acb7a7` and deleted once
 verified. This file is what's left: the parts that still have a future.
 
