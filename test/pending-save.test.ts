@@ -37,10 +37,24 @@ const noopEvent = { addListener: () => {} };
   storage: { local, session: sessionArea },
   action: { onClicked: noopEvent },
   tabs: { onUpdated: noopEvent, onRemoved: noopEvent, get: async () => ({ title: tabTitle }) },
-  runtime: { onConnect: noopEvent, onMessage: noopEvent },
+  runtime: { id: 'test-ext', onConnect: noopEvent, onMessage: noopEvent },
   sidePanel: undefined,
   scripting: { executeScript: async () => [] },
 };
+
+// Panel-shaped sender: the side panel page, no tab.
+const panelSender = {
+  id: 'test-ext',
+  tab: undefined,
+  url: 'chrome-extension://test/src/sidepanel/index.html',
+} as unknown as chrome.runtime.MessageSender;
+// Relay-shaped sender: a content script on the configured dashboard origin
+// (DEFAULT_SETTINGS.dashboardUrl is https://mend-a11y.com).
+const relaySender = {
+  id: 'test-ext',
+  origin: 'https://mend-a11y.com',
+  tab: { id: 1 },
+} as unknown as chrome.runtime.MessageSender;
 
 // fetch stub: records requests, answers with a scripted status/body.
 interface FetchCall {
@@ -71,13 +85,12 @@ const audit: AuditResult = {
 async function main(): Promise<void> {
   const { handleMessage } = await import('../src/background/service-worker');
   const { setCachedAudit, clearCachedAudit } = await import('../src/lib/storage');
-  const sender = { origin: undefined } as chrome.runtime.MessageSender;
 
   // --- STAGE_PENDING_SAVE snapshots the cached audit and the tab title ---
   store = { settings: { ...DEFAULT_SETTINGS } as Settings };
   session = {};
   await setCachedAudit(7, audit);
-  const staged = await handleMessage({ type: 'STAGE_PENDING_SAVE', tabId: 7 }, sender);
+  const staged = await handleMessage({ type: 'STAGE_PENDING_SAVE', tabId: 7 }, panelSender);
   const snapshot = session.pendingSave as PendingSave | undefined;
   ok('staging a cached audit returns ok', (staged as { ok: boolean }).ok === true);
   ok('snapshot copies the result', snapshot?.result.url === audit.url);
@@ -87,7 +100,7 @@ async function main(): Promise<void> {
   session = {};
   tabTitle = undefined;
   await setCachedAudit(7, audit);
-  await handleMessage({ type: 'STAGE_PENDING_SAVE', tabId: 7 }, sender);
+  await handleMessage({ type: 'STAGE_PENDING_SAVE', tabId: 7 }, panelSender);
   ok(
     'snapshot falls back to the audit URL as title',
     (session.pendingSave as PendingSave).pageTitle === audit.url,
@@ -96,7 +109,7 @@ async function main(): Promise<void> {
 
   // --- STAGE_PENDING_SAVE with no cached audit stores nothing ---
   session = {};
-  const notStaged = await handleMessage({ type: 'STAGE_PENDING_SAVE', tabId: 99 }, sender);
+  const notStaged = await handleMessage({ type: 'STAGE_PENDING_SAVE', tabId: 99 }, panelSender);
   ok('staging without a cached audit returns ok: false', (notStaged as { ok: boolean }).ok === false);
   ok('nothing is stored without a cached audit', !('pendingSave' in session));
 
@@ -106,10 +119,10 @@ async function main(): Promise<void> {
   fetchCalls = [];
   fetchReply = { status: 200, body: { duplicate: false } };
   await setCachedAudit(7, audit);
-  await handleMessage({ type: 'STAGE_PENDING_SAVE', tabId: 7 }, sender);
+  await handleMessage({ type: 'STAGE_PENDING_SAVE', tabId: 7 }, panelSender);
   const relayed = await handleMessage(
     { type: 'RELAY_DASHBOARD_KEY', apiKey: 'mend_key1' },
-    sender,
+    relaySender,
   ) as { ok: boolean; uploaded: boolean };
   ok('relay with a staged save reports uploaded', relayed.ok === true && relayed.uploaded === true);
   ok('the staged audit was POSTed to /api/ingest',
@@ -126,7 +139,7 @@ async function main(): Promise<void> {
   fetchCalls = [];
   const bare = await handleMessage(
     { type: 'RELAY_DASHBOARD_KEY', apiKey: 'mend_key2' },
-    sender,
+    relaySender,
   ) as { ok: boolean; uploaded: boolean };
   ok('relay without a staged save reports uploaded: false', bare.ok === true && bare.uploaded === false);
   ok('no request is made without a staged save', fetchCalls.length === 0);
@@ -138,10 +151,10 @@ async function main(): Promise<void> {
   fetchCalls = [];
   fetchReply = { status: 500, body: { error: 'server exploded' } };
   await setCachedAudit(7, audit);
-  await handleMessage({ type: 'STAGE_PENDING_SAVE', tabId: 7 }, sender);
+  await handleMessage({ type: 'STAGE_PENDING_SAVE', tabId: 7 }, panelSender);
   const failed = await handleMessage(
     { type: 'RELAY_DASHBOARD_KEY', apiKey: 'mend_key3' },
-    sender,
+    relaySender,
   ) as { ok: boolean; uploaded: boolean };
   ok('a 500 still resolves the relay ok', failed.ok === true && failed.uploaded === false);
   ok('a 500 keeps the snapshot for a retry', 'pendingSave' in session);
@@ -152,7 +165,7 @@ async function main(): Promise<void> {
   fetchReply = { status: 403, body: { error: 'Saved audit limit reached.', code: 'AUDIT_CAP' } };
   const capped = await handleMessage(
     { type: 'RELAY_DASHBOARD_KEY', apiKey: 'mend_key4' },
-    sender,
+    relaySender,
   ) as { ok: boolean; uploaded: boolean };
   ok('AUDIT_CAP still resolves the relay ok', capped.ok === true && capped.uploaded === false);
   ok('AUDIT_CAP clears the snapshot', !('pendingSave' in session));
@@ -164,11 +177,11 @@ async function main(): Promise<void> {
   fetchCalls = [];
   fetchReply = { status: 200, body: { duplicate: false } };
   await setCachedAudit(7, audit);
-  await handleMessage({ type: 'STAGE_PENDING_SAVE', tabId: 7 }, sender);
+  await handleMessage({ type: 'STAGE_PENDING_SAVE', tabId: 7 }, panelSender);
   await clearCachedAudit(7); // what onUpdated does when the audited tab navigates
   const afterNav = await handleMessage(
     { type: 'RELAY_DASHBOARD_KEY', apiKey: 'mend_key5' },
-    sender,
+    relaySender,
   ) as { ok: boolean; uploaded: boolean };
   ok('the upload survives the tab cache being cleared',
     afterNav.uploaded === true && fetchCalls.length === 1);
