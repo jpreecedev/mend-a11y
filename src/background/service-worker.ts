@@ -27,7 +27,7 @@ import {
   setSettings,
 } from '../lib/storage';
 import { clearHelperEverywhere, perTabState } from '../lib/tabState';
-import { SyncError, syncConfigured, uploadAudit } from '../lib/sync';
+import { SyncError, normalizeDashboardUrl, syncConfigured, uploadAudit } from '../lib/sync';
 
 // Open the side panel from the action click. Doing this in onClicked (rather
 // than via openPanelOnActionClick) means the click confers the activeTab grant
@@ -169,10 +169,43 @@ chrome.runtime.onMessage.addListener((message: PanelMessage, sender, sendRespons
   return true; // keep the channel open for the async response
 });
 
+// Only two peers are ever legitimate on this channel: the extension's own
+// pages (the side panel), and the dashboard-key relay content script. Guard
+// by shape: panel senders always carry a chrome-extension:// sender.url,
+// which a web page can never present; the relay is a content script whose
+// origin must match the configured dashboard. Everything else is refused
+// before any branch runs.
+async function guardSender(
+  message: PanelMessage,
+  sender: chrome.runtime.MessageSender,
+): Promise<{ ok: false; error: string } | null> {
+  if (sender.id !== chrome.runtime.id) return { ok: false, error: 'Unauthorized sender' };
+
+  if (message.type === 'RELAY_DASHBOARD_KEY') {
+    const settings = await getSettings();
+    const expectedOrigin = new URL(
+      normalizeDashboardUrl(settings.dashboardUrl) ?? 'https://mend-a11y.com',
+    ).origin;
+    if (sender.tab !== undefined && sender.origin === expectedOrigin) return null;
+    return { ok: false, error: 'Unauthorized sender' };
+  }
+
+  // Chrome ties the side panel's page to the window's active tab, so
+  // sender.tab is populated here too (verified against the built extension,
+  // not just docs) — it is not the no-tab signal a popup gives. The URL check
+  // alone is still a hard boundary: Chrome sets sender.url from the sender's
+  // real location and a web page can never present a chrome-extension://
+  // URL, so this still excludes every content script, including the relay's.
+  if (sender.url?.startsWith('chrome-extension://')) return null;
+  return { ok: false, error: 'Unauthorized sender' };
+}
+
 export async function handleMessage(
   message: PanelMessage,
   sender: chrome.runtime.MessageSender,
 ): Promise<unknown> {
+  const refusal = await guardSender(message, sender);
+  if (refusal) return refusal;
   switch (message.type) {
     case 'RUN_AUDIT': {
       const result = await runAudit(message.tabId);
@@ -334,8 +367,11 @@ export async function handleMessage(
     }
     case 'RELAY_DASHBOARD_KEY': {
       const settings = await getSettings();
-      const origin = sender.origin ?? settings.dashboardUrl;
-      const next = { ...settings, dashboardApiKey: message.apiKey, dashboardUrl: origin };
+      // The guard above has already required sender.origin to equal this
+      // settings' dashboard origin, so dashboardUrl is left untouched here —
+      // the relay no longer rewrites the upload endpoint from sender-supplied
+      // data.
+      const next = { ...settings, dashboardApiKey: message.apiKey };
       await setSettings(next);
 
       // The funnel's payoff (plan 009): the run the user pressed "Save audit"
