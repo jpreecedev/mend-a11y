@@ -545,7 +545,7 @@ export function App() {
     : undefined;
 
   return (
-    <div class="shell">
+    <main class="shell">
       <div class="topbar">
         <span class="brand">
           <span class="dot" />
@@ -722,7 +722,7 @@ export function App() {
           {toast}
         </div>
       )}
-    </div>
+    </main>
   );
 }
 
