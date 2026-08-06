@@ -76,9 +76,10 @@ Developer Tools
 > a copy-paste before-and-after example. Click Highlight on page to see the
 > exact element.
 >
-> Mend runs entirely on your device. No network requests, no accounts, no API
-> keys, no data collected. Your pages and results never leave your browser. Open
-> the network tab during an audit and check for yourself.
+> Audits run entirely on your device and no account is required. Optionally,
+> connect a free Mend account (mend-a11y.com) and your audit results save to
+> your own dashboard so you can track fixes over time — nothing is sent
+> anywhere unless you set that up, and auto-save can be turned off in settings.
 >
 > Free and open source.
 
@@ -103,29 +104,41 @@ Developer Tools
   locally, and injects a temporary highlight box when the user clicks Highlight
   on page. Required to run the analysis in the page being tested.
 - **storage** — Mend saves the user's settings locally and caches the most
-  recent audit per tab for the session. Nothing is transmitted off the device.
+  recent audit per tab for the session. Nothing is transmitted off the device
+  unless the user connects a dashboard account (below).
 - **sidePanel** — Mend's entire interface is a side panel; this permission lets
   the extension open and display it.
+- **content script on `https://mend-a11y.com/account*`** — Runs only on Mend's
+  own dashboard account page. When the user generates an API key there, the
+  script relays it into extension settings so they don't have to copy/paste
+  it. It reads nothing else and runs nowhere else.
 - **optional host permission (`<all_urls>`)** — Optional and opt-in only. The
   user can choose to grant access to all sites so they can audit several tabs
   without re-invoking Mend on each one. It is requested at runtime with an
   explicit Chrome consent prompt, is not required to use Mend on a single tab,
-  and is used solely to run the same local accessibility analysis, never to
-  transmit or store page content.
+  and is used solely to run the same local accessibility analysis.
 
 ### Data use
 
-- [ ] Declare that Mend does **not collect** any of the listed data types. It
-      transmits and stores nothing off-device; on-page content is read only to
-      analyze it locally and never leaves the machine.
+- [ ] Declare **Website content** collection: when (and only when) the user
+      connects a Mend account with an API key, finished audits upload to that
+      user's own dashboard. An upload contains the audited page's URL and
+      title, timing, and each issue found (rule, severity, WCAG references,
+      selector, a truncated HTML snippet of the failing element). Auto-save
+      can be turned off in settings, in which case audits are sent only when
+      the user presses Save on a result. With no account connected, nothing is
+      ever transmitted.
+- [ ] Declare no other data types collected (no browsing history beyond the
+      audited page's URL in an upload, no personal communications, no
+      location, no telemetry).
 - [ ] Certify: do not sell or transfer user data to third parties.
 - [ ] Certify: do not use or transfer data for purposes unrelated to the single
       purpose.
 - [ ] Certify: do not use or transfer data for creditworthiness or lending.
 
 Everything here must match the privacy policy and the extension's actual
-behavior, or the listing can be removed. Mend's behavior matches "no collection"
-exactly, which is the whole point of building it local-only.
+behavior, or the listing can be removed. The default remains local-only: with
+no account connected, Mend collects nothing.
 
 ### Privacy policy URL
 
@@ -134,9 +147,11 @@ exactly, which is the whole point of building it local-only.
       data-access permissions.
 
 Policy summary (full text lives on the marketing site): Mend reads page content
-only when invoked, only to analyze it locally; collects nothing; makes no
-network requests; stores settings and a per-session audit cache on-device only;
-uses no third parties.
+only when invoked, only to analyze it locally; stores settings and a
+per-session audit cache on-device; makes no network requests and collects
+nothing unless the user connects a Mend account, in which case audit results
+upload to that user's own dashboard (automatically, or manually via Save if
+auto-save is off); uses no third parties.
 
 ---
 

@@ -1,7 +1,9 @@
 import type { AuditResult } from '../../lib/types';
 import { CheckIcon, RefreshIcon, ShieldIcon, UploadIcon } from '../components/Icon';
 import { Pip } from '../components/Pip';
-import type { SaveState } from './ResultsScreen';
+import { SyncStatus, type SyncInfo } from '../components/SyncStatus';
+import { AccountPrompt } from '../components/AccountPrompt';
+import type { AccountPromptActions, SaveState } from './ResultsScreen';
 
 const PASSED_AREAS = [
   'Structure',
@@ -17,12 +19,20 @@ export function PassScreen({
   onRerun,
   onSave,
   saveState = 'idle',
+  sync,
+  onRetrySync,
+  prompt,
 }: {
   result: AuditResult;
   onRerun: () => void;
-  /** Present only when dashboard sync is configured; a clean pass is worth recording too. */
+  /** Present only when a key is configured but auto-save is turned off; a clean pass is worth recording too. */
   onSave?: () => void;
   saveState?: SaveState;
+  /** Present when auto-save is on: this audit's live upload state. */
+  sync?: SyncInfo;
+  onRetrySync?: () => void;
+  /** Present only when no key is configured and the callout isn't dismissed. */
+  prompt?: AccountPromptActions;
 }) {
   return (
     <div class="center-stage">
@@ -57,9 +67,15 @@ export function PassScreen({
           {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : 'Save to dashboard'}
         </button>
       )}
+      {sync && onRetrySync && <SyncStatus sync={sync} onRetry={onRetrySync} />}
+      {prompt && <AccountPrompt onSignup={prompt.onSignup} onDismiss={prompt.onDismiss} />}
       <span class="reassure">
         <ShieldIcon />
-        {onSave ? 'Sent only when you press Save' : 'Nothing left your machine'}
+        {sync
+          ? 'Audits save to your dashboard automatically'
+          : onSave
+            ? 'Sent only when you press Save'
+            : 'Nothing left your machine'}
       </span>
     </div>
   );

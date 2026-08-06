@@ -20,8 +20,10 @@ language with copy-paste examples.
   clearly marked as such, so nothing is ever fabricated.
 - **Everything runs on your machine.** Audits execute locally and results stay
   in the browser. There's no telemetry and no account required. An optional
-  dashboard lets you save the audits you choose to your own Mend account —
-  nothing is ever sent unless you set it up and press Save.
+  dashboard saves your audits to your own Mend account so you can track fixes
+  over time — nothing is ever sent unless you connect an account, and once you
+  do, audits save automatically (or only when you press Save, if you turn
+  auto-save off in settings).
 - **It holds itself to the same bar.** The panel is built to pass the same
   accessibility checks it reports: real semantics, keyboard support, visible
   focus, shape-plus-color severity, and AA contrast in both themes.

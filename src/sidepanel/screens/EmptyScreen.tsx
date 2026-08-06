@@ -5,12 +5,15 @@ export function EmptyScreen({
   error,
   host,
   allSites,
+  syncEnabled = false,
   onRun,
   onGrantAndRun,
 }: {
   error: string | null;
   host?: string | null;
   allSites: boolean;
+  /** True when a dashboard key is set and audits will auto-save. */
+  syncEnabled?: boolean;
   onRun: () => void;
   onGrantAndRun: () => void;
 }) {
@@ -53,7 +56,7 @@ export function EmptyScreen({
       )}
       <span class="reassure">
         <ShieldIcon />
-        Nothing leaves your machine
+        {syncEnabled ? 'Audits save to your dashboard when they finish' : 'Nothing leaves your machine'}
       </span>
     </div>
   );

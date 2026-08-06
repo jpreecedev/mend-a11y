@@ -41,7 +41,7 @@ export type VisionResponse =
   | { ok: false; error: string };
 export type SaveToDashboardResponse =
   | { ok: true; duplicate: boolean }
-  | { ok: false; error: string };
+  | { ok: false; error: string; code?: string; retryable?: boolean };
 
 export async function sendToWorker<T>(message: PanelMessage): Promise<T> {
   return (await chrome.runtime.sendMessage(message)) as T;

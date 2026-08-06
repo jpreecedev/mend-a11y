@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'preact/hooks';
+import { UploadIcon } from '../components/Icon';
 
 const PHASES = [
   'Reading the page',
@@ -15,7 +16,14 @@ const TICK_MS = 280;
  * cosmetic phases on a timer but never reports "done" before the audit has
  * actually finished; when it finishes, remaining phases flush immediately.
  */
-export function RunningScreen({ done }: { done: boolean }) {
+export function RunningScreen({
+  done,
+  willSync = false,
+}: {
+  done: boolean;
+  /** True when auto-save is on: the result will upload to the dashboard. */
+  willSync?: boolean;
+}) {
   const [active, setActive] = useState(0);
 
   useEffect(() => {
@@ -43,6 +51,12 @@ export function RunningScreen({ done }: { done: boolean }) {
           );
         })}
       </ul>
+      {willSync && (
+        <span class="will-sync">
+          <UploadIcon size={13} />
+          This audit will save to your dashboard
+        </span>
+      )}
     </div>
   );
 }

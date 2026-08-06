@@ -78,7 +78,7 @@ export function SettingsScreen({
       />
       <Switch
         name="Access all sites"
-        desc="Audit any tab without invoking Mend on each one. Off by default; nothing leaves your machine either way."
+        desc="Audit any tab without invoking Mend on each one. Off by default."
         checked={allSites}
         onChange={onToggleAllSites}
       />
@@ -87,9 +87,17 @@ export function SettingsScreen({
         type="password"
         value={settings.dashboardApiKey}
         placeholder="mend_…"
-        desc="Optional. Generate one on your mend-a11y.com account page to enable saving audits there. Audits are only sent when you press Save on a result — never automatically."
+        desc="Optional. Generate one on your mend-a11y.com account page. With a key set, audits save to your dashboard when they finish."
         onChange={(v) => set('dashboardApiKey', v)}
       />
+      {settings.dashboardApiKey.trim() !== '' && (
+        <Switch
+          name="Auto-save audits"
+          desc="Upload each audit to your dashboard as soon as it finishes. Turn off to send audits only when you press Save on a result."
+          checked={settings.autoSync}
+          onChange={(v) => set('autoSync', v)}
+        />
+      )}
     </Modal>
   );
 }

@@ -67,6 +67,10 @@ export interface Settings {
   dashboardUrl: string;
   /** API key from the portal's account page. Empty = sync off. */
   dashboardApiKey: string;
+  /** Upload each audit to the dashboard as soon as it finishes (needs a key). */
+  autoSync: boolean;
+  /** True once the user has dismissed the post-audit "create an account" prompt. */
+  accountPromptDismissed: boolean;
 }
 
 export interface DocsExample {

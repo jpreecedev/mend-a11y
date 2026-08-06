@@ -9,6 +9,8 @@ export const DEFAULT_SETTINGS: Settings = {
   highlightStyle: 'overlay',
   dashboardUrl: 'https://mend-a11y.com',
   dashboardApiKey: '',
+  autoSync: true,
+  accountPromptDismissed: false,
 };
 
 const SETTINGS_KEY = 'settings';

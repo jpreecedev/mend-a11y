@@ -1,8 +1,27 @@
-# Animation plans
+# Plans
 
-Empty by design. The six plans from the `improve-animations` pass at `834f519` were all applied in
-commit `0acb7a7` and deleted once verified. This file is what's left: the parts that still have a
-future.
+Empty by design; retired plans are summarized below. The six animation plans from the
+`improve-animations` pass at `834f519` were all applied in commit `0acb7a7` and deleted once
+verified. This file is what's left: the parts that still have a future.
+
+## Dashboard funnel (007–008)
+
+- **007 — account key relay**: shipped in `6643904` (v0.7.2). Content script on
+  `https://mend-a11y.com/account*` relays a freshly generated API key into extension settings via
+  `RELAY_DASHBOARD_KEY`; guarded by `test/dashboard-key-relay.test.ts`. To read the full plan:
+  `git show 6643904:plans/007-account-key-relay.md`.
+- **008 — post-audit account prompt**: shipped 2026-08-06 alongside a change of model the plan
+  predates: with a key configured, audits now upload **automatically** after each run (new
+  `Settings.autoSync`, default on; turn it off to get the old per-audit Save button back). The
+  callout (`AccountPrompt.tsx`) renders on results/pass for keyless users until dismissed
+  (`Settings.accountPromptDismissed`), its CTA opens `/signup?from=extension` (the website's half,
+  plan 047 there, is live), and the panel's `chrome.storage.onChanged` listener picks up the
+  relayed key without a reopen — at which point the current audit posts immediately. Upload state
+  is surfaced live per audit (`SyncStatus.tsx`), and `403 AUDIT_CAP` from the ingest contract is
+  treated as non-retryable with the portal's message shown verbatim. The plan's copy
+  ("only when you choose to") was intentionally not used — the reassure lines and store
+  disclosures were updated to describe auto-save honestly instead. Full plan: this file's history
+  (`git log --diff-filter=D -- plans/008-account-signup-prompt.md`).
 
 To read a deleted plan in full: `git show 0acb7a7:plans/004-modal-enter-exit.md` (and so on for
 `001-motion-tokens`, `002-highlight-raf-performance`, `003-toast-interruptibility`,

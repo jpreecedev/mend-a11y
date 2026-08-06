@@ -3,8 +3,15 @@ import type { AuditResult, Impact, NormalizedIssue } from '../../lib/types';
 import { groupByRule } from '../../lib/normalize';
 import { SevMark, severityLabel } from '../components/Severity';
 import { RefreshIcon, ChevronRight, CheckIcon, FilterIcon, UploadIcon } from '../components/Icon';
+import { SyncStatus, type SyncInfo } from '../components/SyncStatus';
+import { AccountPrompt } from '../components/AccountPrompt';
 
 export type SaveState = 'idle' | 'saving' | 'saved';
+
+export interface AccountPromptActions {
+  onSignup: () => void;
+  onDismiss: () => void;
+}
 
 type SeverityFilter = 'all' | Impact;
 
@@ -26,14 +33,22 @@ export function ResultsScreen({
   onOpenFilters,
   onSave,
   saveState = 'idle',
+  sync,
+  onRetrySync,
+  prompt,
 }: {
   result: AuditResult;
   onOpenIssue: (id: string) => void;
   onRerun: () => void;
   onOpenFilters: () => void;
-  /** Present only when dashboard sync is configured in settings. */
+  /** Present only when a key is configured but auto-save is turned off. */
   onSave?: () => void;
   saveState?: SaveState;
+  /** Present when auto-save is on: this audit's live upload state. */
+  sync?: SyncInfo;
+  onRetrySync?: () => void;
+  /** Present only when no key is configured and the callout isn't dismissed. */
+  prompt?: AccountPromptActions;
 }) {
   const [filter, setFilter] = useState<SeverityFilter>('all');
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -93,8 +108,11 @@ export function ResultsScreen({
               {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : 'Save'}
             </button>
           )}
+          {sync && onRetrySync && <SyncStatus sync={sync} onRetry={onRetrySync} />}
         </div>
       </div>
+
+      {prompt && <AccountPrompt onSignup={prompt.onSignup} onDismiss={prompt.onDismiss} />}
 
       <div class="tiles">
         {TILE_ORDER.map((impact) => {

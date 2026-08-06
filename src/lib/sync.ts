@@ -1,9 +1,11 @@
 import type { AuditResult, NormalizedIssue, Settings } from './types';
 
-// Client for the optional Mend dashboard (the mend-website portal). Uploads are
-// strictly opt-in: nothing is ever sent unless the user has entered a portal
-// URL and API key in settings AND clicks Save on a result. The payload shape
-// here is the contract the portal's /api/ingest endpoint validates.
+// Client for the optional Mend dashboard (the mend-website portal). Nothing is
+// ever sent unless the user has connected an account (portal URL + API key in
+// settings); with a key present, audits upload automatically after each run
+// unless the auto-save setting is off, in which case the Save button sends
+// them. The payload shape here is the contract the portal's /api/ingest
+// endpoint validates.
 
 /** One flat issue as /api/ingest expects it (one entry per affected element). */
 export interface IngestIssue {
@@ -33,6 +35,26 @@ export interface IngestPayload {
 export interface SyncOutcome {
   /** True when the portal had already stored this exact audit. */
   duplicate: boolean;
+}
+
+/**
+ * Upload failure with the portal's own words plus enough structure for the UI
+ * to decide whether a retry can help. `AUDIT_CAP` (the plan's saved-audit
+ * limit) is the one refusal that retrying can never fix — the run stays
+ * well-formed and keeps being refused until the user frees space or upgrades.
+ */
+export class SyncError extends Error {
+  /** Machine code from the portal, e.g. 'AUDIT_CAP'; undefined when it sent none. */
+  readonly code?: string;
+  /** True when sending the same audit again could succeed (network, 429, 500). */
+  readonly retryable: boolean;
+
+  constructor(message: string, opts: { code?: string; retryable: boolean }) {
+    super(message);
+    this.name = 'SyncError';
+    this.code = opts.code;
+    this.retryable = opts.retryable;
+  }
 }
 
 /** Sync is on only when the user has provided both a portal URL and a key. */
@@ -76,8 +98,8 @@ function toIngestIssue(issue: NormalizedIssue): IngestIssue {
 }
 
 /**
- * POST the audit to the portal. Resolves with the outcome, or throws an Error
- * whose message is safe to show in the panel as-is.
+ * POST the audit to the portal. Resolves with the outcome, or throws a
+ * SyncError whose message is safe to show in the panel as-is.
  */
 export async function uploadAudit(
   settings: Settings,
@@ -86,7 +108,10 @@ export async function uploadAudit(
 ): Promise<SyncOutcome> {
   const base = normalizeDashboardUrl(settings.dashboardUrl);
   if (!base) {
-    throw new Error('The dashboard URL in settings must start with https:// (or http:// for local testing).');
+    throw new SyncError(
+      'The dashboard URL in settings must start with https:// (or http:// for local testing).',
+      { retryable: false },
+    );
   }
   const key = settings.dashboardApiKey.trim();
 
@@ -101,20 +126,36 @@ export async function uploadAudit(
       body: JSON.stringify(buildIngestPayload(result, pageTitle)),
     });
   } catch {
-    throw new Error("Couldn't reach the dashboard. Check the URL in settings and your connection.");
+    throw new SyncError(
+      "Couldn't reach the dashboard. Check the URL in settings and your connection.",
+      { retryable: true },
+    );
   }
 
   if (response.status === 401) {
-    throw new Error('The dashboard rejected the API key. Generate a fresh one on your account page.');
+    throw new SyncError(
+      'The dashboard rejected the API key. Generate a fresh one on your account page.',
+      { retryable: false },
+    );
   }
   if (!response.ok) {
     let detail = '';
+    let code: string | undefined;
     try {
-      detail = ((await response.json()) as { error?: string }).error ?? '';
+      const body = (await response.json()) as { error?: string; code?: string };
+      detail = body.error ?? '';
+      code = body.code;
     } catch {
       /* non-JSON error body; fall through to the generic message */
     }
-    throw new Error(detail || `The dashboard returned an error (HTTP ${response.status}).`);
+    // Retryable: 429 after Retry-After, and 5xx (a stored earlier attempt makes
+    // the retry a 200 duplicate). Not retryable: the plan cap (403 AUDIT_CAP)
+    // and client-fix statuses (400/413) — resending the same audit cannot help.
+    const retryable = response.status === 429 || response.status >= 500;
+    throw new SyncError(detail || `The dashboard returned an error (HTTP ${response.status}).`, {
+      code,
+      retryable,
+    });
   }
 
   const body = (await response.json()) as { duplicate?: boolean };

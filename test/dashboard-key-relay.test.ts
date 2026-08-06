@@ -59,6 +59,23 @@ async function main(): Promise<void> {
   ok('dashboardUrl falls back to prior settings when origin is missing',
     withoutOrigin.dashboardUrl === 'https://existing.test');
 
+  // --- a legacy stored blob (before autoSync / the account prompt) gains the defaults ---
+  const { getSettings } = await import('../src/lib/storage');
+  const legacy = { ...DEFAULT_SETTINGS } as Partial<Settings>;
+  delete legacy.autoSync;
+  delete legacy.accountPromptDismissed;
+  store = { settings: legacy };
+  const migrated = await getSettings();
+  ok('legacy blob defaults autoSync on', migrated.autoSync === true);
+  ok('legacy blob defaults the prompt undismissed', migrated.accountPromptDismissed === false);
+
+  // --- a relayed key never resurrects a dismissed prompt ---
+  store = { settings: { ...DEFAULT_SETTINGS, accountPromptDismissed: true } as Settings };
+  await handleMessage({ type: 'RELAY_DASHBOARD_KEY', apiKey: 'mend_relayed4' }, { origin: undefined });
+  const dismissed = store.settings as Settings;
+  ok('accountPromptDismissed survives the relay merge', dismissed.accountPromptDismissed === true);
+  ok('relay leaves autoSync on', dismissed.autoSync === true);
+
   let pass = 0;
   for (const [name, cond] of checks) {
     console.log(`${cond ? 'PASS' : 'FAIL'}  ${name}`);

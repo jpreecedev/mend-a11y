@@ -3,6 +3,7 @@
 // duplicate, rejected key, server error, unreachable host).
 // Run with: tsx test/sync.test.ts
 import {
+  SyncError,
   buildIngestPayload,
   normalizeDashboardUrl,
   syncConfigured,
@@ -70,11 +71,23 @@ async function rejects(p: Promise<unknown>): Promise<string | null> {
   }
 }
 
+async function rejectsWith(p: Promise<unknown>): Promise<SyncError | null> {
+  try {
+    await p;
+    return null;
+  } catch (e) {
+    return e instanceof SyncError ? e : null;
+  }
+}
+
 async function main(): Promise<void> {
   // --- configuration gate ---
   ok('defaults leave sync off', !syncConfigured(DEFAULT_SETTINGS));
   ok('url + key turn sync on', syncConfigured(settings()));
   ok('key alone is not enough', !syncConfigured(settings({ dashboardUrl: '  ' })));
+  ok('auto-save defaults on', DEFAULT_SETTINGS.autoSync === true);
+  ok('prompt dismissal does not affect the sync gate',
+    syncConfigured(settings({ accountPromptDismissed: true })));
 
   // --- URL normalization ---
   ok('trailing slashes drop', normalizeDashboardUrl('https://a.test///') === 'https://a.test');
@@ -119,20 +132,37 @@ async function main(): Promise<void> {
   ok('200 duplicate resolves as duplicate', dup.duplicate === true);
 
   scriptFetch({ status: 401, body: { error: 'Unauthorized' } });
-  const unauth = await rejects(uploadAudit(settings(), result, 'My Page'));
-  ok('401 explains the key was rejected', unauth != null && /API key/.test(unauth));
+  const unauth = await rejectsWith(uploadAudit(settings(), result, 'My Page'));
+  ok('401 explains the key was rejected', unauth != null && /API key/.test(unauth.message));
+  ok('401 is not retryable', unauth != null && !unauth.retryable);
 
   scriptFetch({ status: 400, body: { error: 'url must be an http(s) URL' } });
-  const badReq = await rejects(uploadAudit(settings(), result, 'My Page'));
-  ok('400 surfaces the server message', badReq === 'url must be an http(s) URL');
+  const badReq = await rejectsWith(uploadAudit(settings(), result, 'My Page'));
+  ok('400 surfaces the server message', badReq?.message === 'url must be an http(s) URL');
+  ok('400 is not retryable', badReq != null && !badReq.retryable);
+
+  // The plan's saved-audit cap: message verbatim, code surfaced, never retried.
+  scriptFetch({ status: 403, body: { error: 'Saved-audit limit reached. Free up space or upgrade.', code: 'AUDIT_CAP' } });
+  const capped = await rejectsWith(uploadAudit(settings(), result, 'My Page'));
+  ok('403 keeps the cap message verbatim',
+    capped?.message === 'Saved-audit limit reached. Free up space or upgrade.');
+  ok('403 carries the AUDIT_CAP code', capped?.code === 'AUDIT_CAP');
+  ok('403 cap is not retryable', capped != null && !capped.retryable);
+
+  scriptFetch({ status: 429, body: { error: 'Too many requests. Try again in a minute.' } });
+  const limited = await rejectsWith(uploadAudit(settings(), result, 'My Page'));
+  ok('429 surfaces the server message', limited?.message === 'Too many requests. Try again in a minute.');
+  ok('429 is retryable', limited?.retryable === true);
 
   scriptFetch({ status: 500 });
-  const server = await rejects(uploadAudit(settings(), result, 'My Page'));
-  ok('500 falls back to a generic message', server != null && /HTTP 500/.test(server));
+  const server = await rejectsWith(uploadAudit(settings(), result, 'My Page'));
+  ok('500 falls back to a generic message', server != null && /HTTP 500/.test(server.message));
+  ok('500 is retryable', server?.retryable === true);
 
   scriptFetch('network-error');
-  const offline = await rejects(uploadAudit(settings(), result, 'My Page'));
-  ok('network failure reads as unreachable', offline != null && /reach the dashboard/.test(offline));
+  const offline = await rejectsWith(uploadAudit(settings(), result, 'My Page'));
+  ok('network failure reads as unreachable', offline != null && /reach the dashboard/.test(offline.message));
+  ok('network failure is retryable', offline?.retryable === true);
 
   const badUrl = await rejects(uploadAudit(settings({ dashboardUrl: 'portal.test' }), result, 'T'));
   ok('invalid URL fails before any request', badUrl != null && /https:\/\//.test(badUrl));

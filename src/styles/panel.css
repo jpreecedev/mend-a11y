@@ -1278,10 +1278,103 @@ pre.code {
 }
 
 /* ---------- reduced motion ---------- */
+/* Dashboard sync status chip: quiet, pill-shaped, sized to sit with the small
+   buttons in results-head actions or under the pass stage. */
+.sync-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 4px 11px;
+  min-height: 28px;
+  border: 1px solid var(--ap-border-strong);
+  background: var(--ap-surface);
+  color: var(--ap-fg-muted);
+}
+.sync-chip.synced {
+  color: var(--ap-pass-fg);
+  background: color-mix(in srgb, var(--ap-pass-bg) 60%, var(--ap-surface));
+  border-color: color-mix(in srgb, var(--ap-pass-fg) 25%, transparent);
+}
+.sync-chip.error {
+  color: var(--ap-sev-serious-fg);
+  background: color-mix(in srgb, var(--ap-sev-serious-fg) 10%, var(--ap-surface));
+  border-color: color-mix(in srgb, var(--ap-sev-serious-fg) 30%, transparent);
+}
+button.sync-chip.error {
+  cursor: pointer;
+}
+button.sync-chip.error:hover {
+  background: color-mix(in srgb, var(--ap-sev-serious-fg) 18%, var(--ap-surface));
+}
+.sync-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ap-accent);
+  animation: sync-pulse 1s ease-in-out infinite;
+}
+@keyframes sync-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+/* Quiet line under the running phases when the result will auto-upload. */
+.will-sync {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--ap-fg-subtle);
+  margin-top: 4px;
+}
+
+/* Post-audit account callout: a bordered card, deliberately quieter than the
+   severity tiles so results stay primary. */
+.account-prompt {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: left;
+  width: 100%;
+  border: 1px solid var(--ap-border-strong);
+  border-radius: 10px;
+  background: var(--ap-surface);
+  padding: 12px 14px;
+  margin: 10px 0 2px;
+}
+.account-prompt-text {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ap-fg-muted);
+}
+.account-prompt-text strong {
+  color: var(--ap-fg);
+}
+.account-prompt-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   /* Movement is dropped element-by-element below. Colour, background and
      opacity transitions are deliberately left at full speed: they carry no
      movement, and removing them costs feedback without reducing motion. */
+
+  /* The upload pulse holds a steady dim dot; the chip text carries the state. */
+  .sync-dot {
+    animation: none;
+    opacity: 0.6;
+  }
 
   /* Pip's idle float is decorative. */
   .float {

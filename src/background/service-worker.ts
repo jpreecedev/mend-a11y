@@ -24,7 +24,7 @@ import {
   setSettings,
 } from '../lib/storage';
 import { clearHelperEverywhere, perTabState } from '../lib/tabState';
-import { syncConfigured, uploadAudit } from '../lib/sync';
+import { SyncError, syncConfigured, uploadAudit } from '../lib/sync';
 
 // Open the side panel from the action click. Doing this in onClicked (rather
 // than via openPanelOnActionClick) means the click confers the activeTab grant
@@ -310,6 +310,9 @@ export async function handleMessage(
         const outcome = await uploadAudit(settings, result, tab?.title ?? result.url);
         return { ok: true, duplicate: outcome.duplicate };
       } catch (e: unknown) {
+        if (e instanceof SyncError) {
+          return { ok: false, error: e.message, code: e.code, retryable: e.retryable };
+        }
         return { ok: false, error: e instanceof Error ? e.message : 'Saving failed. Try again.' };
       }
     }

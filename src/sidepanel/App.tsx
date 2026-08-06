@@ -11,7 +11,8 @@ import {
   type VisionResponse,
 } from '../lib/messages';
 import { DEFAULT_SETTINGS } from '../lib/storage';
-import { syncConfigured } from '../lib/sync';
+import { normalizeDashboardUrl, syncConfigured } from '../lib/sync';
+import type { SyncInfo } from './components/SyncStatus';
 import { defaultFilters, type FilterState } from './screens/filterState';
 import { EmptyScreen } from './screens/EmptyScreen';
 import { RunningScreen } from './screens/RunningScreen';
@@ -84,10 +85,10 @@ export function App() {
   const [showOutline, setShowOutline] = useState(false);
   const [vision, setVision] = useState<VisionMode | null>(null);
   const [showVision, setShowVision] = useState(false);
-  // Dashboard saves: which audits (url|startedAt) already went up, and whether
-  // an upload is in flight, so the Save button can show Saved / Saving states.
-  const [savedAudits, setSavedAudits] = useState<Set<string>>(new Set());
-  const [saving, setSaving] = useState(false);
+  // Dashboard uploads, keyed by audit (url|startedAt). With auto-save on, an
+  // entry appears the moment an audit finishes and drives the live sync chip;
+  // with it off, the same map backs the manual Save button's states.
+  const [syncStates, setSyncStates] = useState<Record<string, SyncInfo>>({});
 
   const filtersSheet = useSheet(showFilters);
   const settingsSheet = useSheet(showSettings);
@@ -116,6 +117,21 @@ export function App() {
     chrome.permissions.onAdded.addListener(onPerm);
     chrome.permissions.onRemoved.addListener(onPerm);
 
+    // A key relayed in from the account page (or written by another panel)
+    // must reach an already-open panel: re-fetch through GET_SETTINGS so the
+    // default-merging in getSettings stays the single source of truth.
+    const onStorage = (
+      changes: Record<string, chrome.storage.StorageChange>,
+      area: string,
+    ): void => {
+      if (area === 'local' && changes['settings']) {
+        void sendToWorker<SettingsResponse>({ type: 'GET_SETTINGS' }).then((s) => {
+          if (!cancelled) setSettings(s.settings);
+        });
+      }
+    };
+    chrome.storage.onChanged.addListener(onStorage);
+
     // The side panel closing does not reliably run React effect cleanup, so
     // clear any page overlay explicitly when the panel document is hidden or
     // unloaded. pagehide is the dependable unload signal for this context.
@@ -143,6 +159,7 @@ export function App() {
       port.disconnect();
       chrome.permissions.onAdded.removeListener(onPerm);
       chrome.permissions.onRemoved.removeListener(onPerm);
+      chrome.storage.onChanged.removeListener(onStorage);
     };
   }, []);
 
@@ -431,33 +448,81 @@ export function App() {
     void sendToWorker({ type: 'SET_SETTINGS', settings: next });
   }, []);
 
-  // Opt-in dashboard save. The worker reads the cached audit for the tab and
-  // uploads it; the panel only tracks button state and reports the outcome.
+  // Dashboard sync. The worker reads the cached audit for the tab and uploads
+  // it; the panel tracks per-audit state and reports the outcome. With
+  // auto-save on (the default once a key is set), the effect below uploads
+  // every finished audit on its own — including the audit already on screen
+  // the moment a key first arrives via the account-page relay.
   const syncEnabled = syncConfigured(settings);
+  const autoSync = syncEnabled && settings.autoSync;
   const auditKey = result ? `${result.url}|${result.startedAt}` : null;
-  const saveState = saving ? 'saving' : auditKey && savedAudits.has(auditKey) ? 'saved' : 'idle';
+  const syncInfo = auditKey ? syncStates[auditKey] : undefined;
 
-  const saveToDashboard = useCallback(async () => {
-    if (tabId == null || auditKey == null) return;
-    setSaving(true);
-    try {
+  const uploadForTab = useCallback(
+    async (target: number, key: string) => {
+      setSyncStates((prev) => ({ ...prev, [key]: { phase: 'uploading' } }));
+      announce('Saving audit to your dashboard.');
       const res = await sendToWorker<SaveToDashboardResponse>({
         type: 'SAVE_TO_DASHBOARD',
-        tabId,
-      });
+        tabId: target,
+      }).catch(
+        (): SaveToDashboardResponse => ({
+          ok: false,
+          error: 'Saving failed. Try again.',
+          retryable: true,
+        }),
+      );
       if (!res.ok) {
-        // Long enough to actually read a sentence-length error.
+        setSyncStates((prev) => ({
+          ...prev,
+          [key]: { phase: 'error', error: res.error, retryable: res.retryable === true },
+        }));
+        // Long enough to actually read a sentence-length error; the contract
+        // keeps the portal's message (plan caps included) user-readable as-is.
         showToast(res.error, 5000);
         announce('Saving to the dashboard failed.');
         return;
       }
-      setSavedAudits((prev) => new Set(prev).add(auditKey));
-      showToast(res.duplicate ? 'Already on your dashboard' : 'Saved to your dashboard');
+      setSyncStates((prev) => ({ ...prev, [key]: { phase: 'synced', duplicate: res.duplicate } }));
       announce('Audit saved to your dashboard.');
-    } finally {
-      setSaving(false);
-    }
-  }, [tabId, auditKey, showToast]);
+    },
+    [showToast],
+  );
+
+  // Auto-upload: any finished audit on the active tab that hasn't been sent
+  // (or refused) yet goes up as soon as sync is on. Firing on settings changes
+  // too is what makes a freshly entered or relayed key post the current audit.
+  useEffect(() => {
+    if (!autoSync || tabId == null || auditKey == null) return;
+    if (syncStates[auditKey]) return;
+    void uploadForTab(tabId, auditKey);
+  }, [autoSync, tabId, auditKey, syncStates, uploadForTab]);
+
+  const saveToDashboard = useCallback(() => {
+    if (tabId == null || auditKey == null) return;
+    void uploadForTab(tabId, auditKey);
+  }, [tabId, auditKey, uploadForTab]);
+
+  // Manual mode (auto-save off) keeps the Save button; an error drops the
+  // button back to idle — the toast has said why, pressing again retries.
+  const saveState =
+    syncInfo?.phase === 'uploading' ? 'saving' : syncInfo?.phase === 'synced' ? 'saved' : 'idle';
+
+  // Keyless users get the account callout on results/pass until dismissed.
+  const showAccountPrompt = !syncEnabled && !settings.accountPromptDismissed;
+
+  const openSignup = useCallback(() => {
+    const base = normalizeDashboardUrl(settings.dashboardUrl) ?? 'https://mend-a11y.com';
+    void chrome.tabs.create({ url: `${base}/signup?from=extension` });
+  }, [settings.dashboardUrl]);
+
+  const dismissPrompt = useCallback(() => {
+    updateSettings({ ...settings, accountPromptDismissed: true });
+  }, [settings, updateSettings]);
+
+  const prompt = showAccountPrompt
+    ? { onSignup: openSignup, onDismiss: dismissPrompt }
+    : undefined;
 
   return (
     <div class="shell">
@@ -520,27 +585,34 @@ export function App() {
             error={error}
             host={active.host}
             allSites={allSites}
+            syncEnabled={autoSync}
             onRun={() => void runAudit()}
             onGrantAndRun={() => void grantAndRun()}
           />
         )}
-        {route === 'running' && <RunningScreen done={auditDone} />}
+        {route === 'running' && <RunningScreen done={auditDone} willSync={autoSync} />}
         {route === 'results' && visibleResult && (
           <ResultsScreen
             result={visibleResult}
             onOpenIssue={openIssue}
             onRerun={() => void runAudit()}
             onOpenFilters={() => setShowFilters(true)}
-            onSave={syncEnabled ? () => void saveToDashboard() : undefined}
+            onSave={syncEnabled && !autoSync ? saveToDashboard : undefined}
             saveState={saveState}
+            sync={autoSync ? syncInfo : undefined}
+            onRetrySync={saveToDashboard}
+            prompt={prompt}
           />
         )}
         {route === 'pass' && result && (
           <PassScreen
             result={result}
             onRerun={() => void runAudit()}
-            onSave={syncEnabled ? () => void saveToDashboard() : undefined}
+            onSave={syncEnabled && !autoSync ? saveToDashboard : undefined}
             saveState={saveState}
+            sync={autoSync ? syncInfo : undefined}
+            onRetrySync={saveToDashboard}
+            prompt={prompt}
           />
         )}
         {route === 'detail' && activeIssue && (
