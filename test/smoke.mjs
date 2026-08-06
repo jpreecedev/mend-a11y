@@ -5,7 +5,7 @@
 // In CI this runs under xvfb with a headful browser, since extension loading
 // is most reliable that way. Run with: node test/smoke.mjs
 import puppeteer from 'puppeteer';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -16,8 +16,45 @@ if (!existsSync(resolve(DIST, 'manifest.json'))) {
   process.exit(1);
 }
 
+// The extension page's default MV3 CSP (script-src 'self') blocks the inline
+// <script> that page.addScriptTag({ path }) injects, so window.axe never
+// gets set (no error is thrown, it just silently fails to load). Injecting
+// via page.evaluate instead works because CDP's Runtime.evaluate is not
+// subject to the page's CSP.
+const AXE_SOURCE = readFileSync(resolve(DIST, 'vendor/axe.min.js'), 'utf8');
+
 const checks = [];
 const ok = (name, cond) => checks.push([name, Boolean(cond)]);
+
+// Injects the vendored axe engine into `page` and runs it against the full
+// document, returning the violations array. Uses no `runOnly` restriction:
+// the full default ruleset is the bar the panel is held to.
+async function selfAudit(page, label) {
+  // Several tokens (e.g. --ap-accent) drive a CSS transition, so a theme
+  // switch just applied via emulateMediaFeatures can still be mid-animation
+  // here even after data-theme has flipped. Freeze all transitions/animations
+  // first so color-contrast reads the settled end state, not an interpolated
+  // frame - otherwise the check flakes on whichever color the transition
+  // happened to be mid-flight through.
+  await page.evaluate(() => {
+    const style = document.createElement('style');
+    style.textContent = '*, *::before, *::after { transition: none !important; animation: none !important; }';
+    document.head.appendChild(style);
+  });
+  await page.evaluate(AXE_SOURCE);
+  const violations = await page.evaluate(async () => {
+    const result = await window.axe.run(document, { resultTypes: ['violations'] });
+    return result.violations;
+  });
+  if (violations.length) {
+    console.error(`[smoke] self-audit (${label}) violations:`);
+    for (const v of violations) {
+      const targets = v.nodes.map((n) => n.target.join(' ')).join(', ');
+      console.error(`  ${v.id} [${v.impact}] - ${targets}`);
+    }
+  }
+  return violations;
+}
 
 let browser;
 try {
@@ -59,9 +96,29 @@ try {
   ok('side panel renders the Mend brand', brand.includes('Mend'));
   ok('empty state offers a control', hasButton);
   ok('no uncaught page errors', pageErrors.length === 0);
+  ok('no console errors', consoleErrors.length === 0);
 
   if (pageErrors.length) console.error('[smoke] page errors:\n  ' + pageErrors.join('\n  '));
   if (consoleErrors.length) console.warn('[smoke] console errors (non-fatal):\n  ' + consoleErrors.join('\n  '));
+
+  // useThemeClass resolves the theme via a matchMedia 'change' listener and
+  // applies it to <html data-theme> inside a React effect, which lands one
+  // tick after emulateMediaFeatures resolves. Wait for the attribute itself
+  // rather than assuming the emulate call already took effect, or the audit
+  // below measures the *previous* theme's colors.
+  await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'light' }]);
+  await page.waitForFunction(() => document.documentElement.dataset.theme === 'light', {
+    timeout: 5_000,
+  });
+  const lightViolations = await selfAudit(page, 'light');
+  ok('panel self-audit (light): zero violations', lightViolations.length === 0);
+
+  await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'dark' }]);
+  await page.waitForFunction(() => document.documentElement.dataset.theme === 'dark', {
+    timeout: 5_000,
+  });
+  const darkViolations = await selfAudit(page, 'dark');
+  ok('panel self-audit (dark): zero violations', darkViolations.length === 0);
 } catch (err) {
   console.error('[smoke] failed to run:', err);
   ok('smoke test ran to completion', false);
