@@ -17,11 +17,12 @@ export default defineManifest({
   // any site the user browses — except its own companion dashboard, where a
   // content script relays a freshly generated API key into extension storage
   // so the user doesn't have to copy/paste it. That script runs only on the
-  // dashboard's own account page and does nothing else.
+  // two dashboard pages that hand out a key — the account page and the
+  // /connect step of the extension funnel — and nowhere else.
   permissions: ['activeTab', 'scripting', 'storage', 'sidePanel'],
   content_scripts: [
     {
-      matches: ['https://mend-a11y.com/account*'],
+      matches: ['https://mend-a11y.com/account*', 'https://mend-a11y.com/connect*'],
       js: ['src/content/dashboard-key-relay.ts'],
       run_at: 'document_idle',
     },

@@ -1,4 +1,4 @@
-import type { AuditResult, Settings } from './types';
+import type { AuditResult, PendingSave, Settings } from './types';
 
 export const DEFAULT_SETTINGS: Settings = {
   theme: 'auto',
@@ -42,4 +42,23 @@ export async function setCachedAudit(tabId: number, result: AuditResult): Promis
 
 export async function clearCachedAudit(tabId: number): Promise<void> {
   await chrome.storage.session.remove(cacheKey(tabId));
+}
+
+// The pending save is a tab-independent snapshot of a finished run, staged when
+// the user presses "Save audit" and flushed by the worker the moment the
+// /connect funnel relays a key. Session-scoped on purpose: it holds page
+// content (selectors, HTML snippets) and must not outlive the browser session.
+const PENDING_SAVE_KEY = 'pendingSave';
+
+export async function getPendingSave(): Promise<PendingSave | null> {
+  const stored = await chrome.storage.session.get(PENDING_SAVE_KEY);
+  return (stored[PENDING_SAVE_KEY] as PendingSave | undefined) ?? null;
+}
+
+export async function setPendingSave(pending: PendingSave): Promise<void> {
+  await chrome.storage.session.set({ [PENDING_SAVE_KEY]: pending });
+}
+
+export async function clearPendingSave(): Promise<void> {
+  await chrome.storage.session.remove(PENDING_SAVE_KEY);
 }

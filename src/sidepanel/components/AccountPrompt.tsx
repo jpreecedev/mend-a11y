@@ -2,27 +2,28 @@ import { CloseIcon, ExternalIcon } from './Icon';
 
 /**
  * Post-audit callout for keyless users: the top of the dashboard-adoption
- * funnel. Signup opens `/signup?from=extension`; once the account page
- * generates a key, the content-script relay fills settings and the open panel
- * swaps this callout for live sync without a reopen. Dismissal is one-time and
+ * funnel. "Save audit" stages the finished run tab-independently
+ * (STAGE_PENDING_SAVE) and opens `/login?from=extension`; once /connect
+ * relays a key, the worker uploads the staged run and the open panel swaps
+ * this callout for live sync without a reopen. Dismissal is one-time and
  * global (Settings keeps the evergreen path).
  */
 export function AccountPrompt({
-  onSignup,
+  onSave,
   onDismiss,
 }: {
-  onSignup: () => void;
+  onSave: () => void;
   onDismiss: () => void;
 }) {
   return (
     <div class="account-prompt" role="note">
       <div class="account-prompt-text">
-        <strong>Keep this audit?</strong> Create a free account and every audit you run saves to
-        your dashboard automatically — track fixes over time.
+        <strong>Keep this audit?</strong> Save it to a free Mend dashboard and track fixes over
+        time. Takes about a minute.
       </div>
       <div class="account-prompt-actions">
-        <button class="btn small primary" onClick={onSignup}>
-          Create free account
+        <button class="btn small primary" onClick={onSave}>
+          Save audit
           <ExternalIcon />
         </button>
         <button class="icon-btn" aria-label="Dismiss" onClick={onDismiss}>

@@ -44,6 +44,13 @@ export interface AuditResult {
   partialReason?: string;
 }
 
+/** A finished run held across the sign-up detour (plan 009). */
+export interface PendingSave {
+  result: AuditResult;
+  pageTitle: string;
+  stagedAt: number;
+}
+
 export interface IssueGroup {
   ruleId: string;
   impact: Impact;

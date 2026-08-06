@@ -19,8 +19,11 @@ import {
 } from '../lib/vision';
 import {
   clearCachedAudit,
+  clearPendingSave,
   getCachedAudit,
+  getPendingSave,
   getSettings,
+  setPendingSave,
   setSettings,
 } from '../lib/storage';
 import { clearHelperEverywhere, perTabState } from '../lib/tabState';
@@ -316,11 +319,43 @@ export async function handleMessage(
         return { ok: false, error: e instanceof Error ? e.message : 'Saving failed. Try again.' };
       }
     }
+    case 'STAGE_PENDING_SAVE': {
+      const result = await getCachedAudit(message.tabId);
+      if (!result) return { ok: false };
+      const tab = await chrome.tabs.get(message.tabId).catch(() => null);
+      // Copied, not referenced: the tab is about to lose focus and may navigate,
+      // which clears its cache entry via the onUpdated listener above.
+      await setPendingSave({
+        result,
+        pageTitle: tab?.title ?? result.url,
+        stagedAt: Date.now(),
+      });
+      return { ok: true };
+    }
     case 'RELAY_DASHBOARD_KEY': {
       const settings = await getSettings();
       const origin = sender.origin ?? settings.dashboardUrl;
-      await setSettings({ ...settings, dashboardApiKey: message.apiKey, dashboardUrl: origin });
-      return { ok: true };
+      const next = { ...settings, dashboardApiKey: message.apiKey, dashboardUrl: origin };
+      await setSettings(next);
+
+      // The funnel's payoff (plan 009): the run the user pressed "Save audit"
+      // on goes up the instant the key lands, from here rather than the panel
+      // — the panel is looking at the website's tab by now, not the audited
+      // one. `uploaded` tells the content script whether to ack the page.
+      const pending = await getPendingSave();
+      if (!pending) return { ok: true, uploaded: false };
+      try {
+        await uploadAudit(next, pending.result, pending.pageTitle);
+        await clearPendingSave();
+        return { ok: true, uploaded: true };
+      } catch (e: unknown) {
+        // Keep the snapshot on a retryable failure so a second attempt (a
+        // re-press of Save, a fresh key) can still send it. A refusal that
+        // retrying cannot fix — the plan's saved-audit cap — drops it, so it
+        // does not sit in session storage forever.
+        if (e instanceof SyncError && !e.retryable) await clearPendingSave();
+        return { ok: true, uploaded: false };
+      }
     }
     default:
       return { ok: false, error: 'Unknown message' };

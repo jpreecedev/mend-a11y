@@ -4,7 +4,7 @@ Empty by design; retired plans are summarized below. The six animation plans fro
 `improve-animations` pass at `834f519` were all applied in commit `0acb7a7` and deleted once
 verified. This file is what's left: the parts that still have a future.
 
-## Dashboard funnel (007–008)
+## Dashboard funnel (007–009)
 
 - **007 — account key relay**: shipped in `6643904` (v0.7.2). Content script on
   `https://mend-a11y.com/account*` relays a freshly generated API key into extension settings via
@@ -22,6 +22,19 @@ verified. This file is what's left: the parts that still have a future.
   ("only when you choose to") was intentionally not used — the reassure lines and store
   disclosures were updated to describe auto-save honestly instead. Full plan: this file's history
   (`git log --diff-filter=D -- plans/008-account-signup-prompt.md`).
+- **009 — save-audit funnel**: shipped 2026-08-06. The callout's CTA is now **Save audit**: it
+  stages the finished run tab-independently in `chrome.storage.session` (`STAGE_PENDING_SAVE` →
+  `PendingSave` in `storage.ts`) and opens `/login?from=extension`; when `/connect` relays a key,
+  `RELAY_DASHBOARD_KEY` stores it and immediately uploads the snapshot from the worker — the run
+  no longer depends on which tab the panel is showing, or survives only until the audited tab
+  navigates. The relay's response gained `uploaded`, on which the content script (now also matched
+  on `https://mend-a11y.com/connect*`) posts `MEND_AUDIT_SAVED` back into the page so `/connect`
+  stops waiting. Retryable upload failures keep the snapshot; a 403 `AUDIT_CAP` drops it. Website
+  half: `mend-website@da11bad`; the message shapes and `?from=extension` are described in
+  `mend-website/contract/README.md` → "The browser handoff". Guarded by
+  `test/pending-save.test.ts`, whose keystone check stages, clears the tab cache, then relays and
+  asserts the POST still happens. Full plan:
+  `git log --diff-filter=D -- plans/009-save-audit-funnel.md`.
 
 To read a deleted plan in full: `git show 0acb7a7:plans/004-modal-enter-exit.md` (and so on for
 `001-motion-tokens`, `002-highlight-raf-performance`, `003-toast-interruptibility`,

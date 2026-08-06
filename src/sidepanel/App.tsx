@@ -5,6 +5,7 @@ import {
   sendToWorker,
   type RunAuditResponse,
   type SaveToDashboardResponse,
+  type StagePendingSaveResponse,
   type SettingsResponse,
   type TextSpacingResponse,
   type FocusOrderResponse,
@@ -511,17 +512,27 @@ export function App() {
   // Keyless users get the account callout on results/pass until dismissed.
   const showAccountPrompt = !syncEnabled && !settings.accountPromptDismissed;
 
-  const openSignup = useCallback(() => {
+  const saveAudit = useCallback(() => {
     const base = normalizeDashboardUrl(settings.dashboardUrl) ?? 'https://mend-a11y.com';
-    void chrome.tabs.create({ url: `${base}/signup?from=extension` });
-  }, [settings.dashboardUrl]);
+    const open = () => void chrome.tabs.create({ url: `${base}/login?from=extension` });
+    if (tabId == null) {
+      open();
+      return;
+    }
+    // Stage first, then open: the website's /connect step uploads whatever is
+    // staged the moment it hands us a key, and a race here would leave it
+    // waiting on an empty snapshot.
+    void sendToWorker<StagePendingSaveResponse>({ type: 'STAGE_PENDING_SAVE', tabId })
+      .catch(() => undefined)
+      .then(open);
+  }, [settings.dashboardUrl, tabId]);
 
   const dismissPrompt = useCallback(() => {
     updateSettings({ ...settings, accountPromptDismissed: true });
   }, [settings, updateSettings]);
 
   const prompt = showAccountPrompt
-    ? { onSignup: openSignup, onDismiss: dismissPrompt }
+    ? { onSave: saveAudit, onDismiss: dismissPrompt }
     : undefined;
 
   return (

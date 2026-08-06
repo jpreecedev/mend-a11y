@@ -9,7 +9,7 @@ import { AccountPrompt } from '../components/AccountPrompt';
 export type SaveState = 'idle' | 'saving' | 'saved';
 
 export interface AccountPromptActions {
-  onSignup: () => void;
+  onSave: () => void;
   onDismiss: () => void;
 }
 
@@ -112,7 +112,7 @@ export function ResultsScreen({
         </div>
       </div>
 
-      {prompt && <AccountPrompt onSignup={prompt.onSignup} onDismiss={prompt.onDismiss} />}
+      {prompt && <AccountPrompt onSave={prompt.onSave} onDismiss={prompt.onDismiss} />}
 
       <div class="tiles">
         {TILE_ORDER.map((impact) => {

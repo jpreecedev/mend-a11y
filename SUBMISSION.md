@@ -108,10 +108,12 @@ Developer Tools
   unless the user connects a dashboard account (below).
 - **sidePanel** — Mend's entire interface is a side panel; this permission lets
   the extension open and display it.
-- **content script on `https://mend-a11y.com/account*`** — Runs only on Mend's
-  own dashboard account page. When the user generates an API key there, the
-  script relays it into extension settings so they don't have to copy/paste
-  it. It reads nothing else and runs nowhere else.
+- **content script on `https://mend-a11y.com/account*` and
+  `https://mend-a11y.com/connect*`** — Runs only on the two pages of Mend's own
+  dashboard that hand out an API key: the account page and the connect step
+  shown after signing up from the extension. When the user generates a key
+  there, the script relays it into extension settings so they don't have to
+  copy/paste it. It reads nothing else and runs nowhere else.
 - **optional host permission (`<all_urls>`)** — Optional and opt-in only. The
   user can choose to grant access to all sites so they can audit several tabs
   without re-invoking Mend on each one. It is requested at runtime with an

@@ -18,6 +18,7 @@ export type PanelMessage =
   | { type: 'GET_SETTINGS' }
   | { type: 'SET_SETTINGS'; settings: Settings }
   | { type: 'SAVE_TO_DASHBOARD'; tabId: number }
+  | { type: 'STAGE_PENDING_SAVE'; tabId: number }
   | { type: 'RELAY_DASHBOARD_KEY'; apiKey: string };
 
 export type RunAuditResponse =
@@ -42,6 +43,9 @@ export type VisionResponse =
 export type SaveToDashboardResponse =
   | { ok: true; duplicate: boolean }
   | { ok: false; error: string; code?: string; retryable?: boolean };
+export type StagePendingSaveResponse = { ok: boolean };
+/** `ok` reports the key landing in settings; `uploaded` whether a staged audit went up with it. */
+export type RelayDashboardKeyResponse = { ok: true; uploaded: boolean };
 
 export async function sendToWorker<T>(message: PanelMessage): Promise<T> {
   return (await chrome.runtime.sendMessage(message)) as T;

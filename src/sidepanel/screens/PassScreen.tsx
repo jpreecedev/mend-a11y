@@ -68,7 +68,7 @@ export function PassScreen({
         </button>
       )}
       {sync && onRetrySync && <SyncStatus sync={sync} onRetry={onRetrySync} />}
-      {prompt && <AccountPrompt onSignup={prompt.onSignup} onDismiss={prompt.onDismiss} />}
+      {prompt && <AccountPrompt onSave={prompt.onSave} onDismiss={prompt.onDismiss} />}
       <span class="reassure">
         <ShieldIcon />
         {sync
