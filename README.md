@@ -43,12 +43,13 @@ formal spec" links in issue detail, which open the official WCAG page in a new
 tab when you click them. Open the network tab during an audit and check for
 yourself.
 
-The one exception is entirely in your hands: the optional dashboard. If you
-enter a dashboard URL and API key in settings, a **Save** button appears on
-results, and pressing it sends that audit (the page URL, title, and the issues
-found) to your own Mend account so you can track progress over time. Nothing is
-ever uploaded automatically, and leaving the settings blank keeps Mend fully
-offline.
+The one exception is entirely in your hands: the optional dashboard. Enter a
+dashboard URL and API key in settings, and Mend starts **automatically**
+uploading every finished audit (the page URL, title, and the issues found) to
+your own Mend account so you can track progress over time. Turn auto-save off
+in settings and that becomes a per-audit **Save** button instead, so nothing
+goes out until you press it. Remove the key, or never add one, and Mend stays
+fully offline.
 
 ## Under the hood
 
@@ -102,13 +103,18 @@ npm run test:unit   # pipeline, timeout, and docs-corpus checks (no browser)
 npm run test:smoke  # loads the built extension and checks the panel renders
 ```
 
-`test:unit` runs three fast suites with `tsx`: the normalization pipeline
-(sorting, grouping, settings-to-tags), the audit timeout and watchdog logic, and
-a corpus guard that fails if any v1 rule is undocumented or malformed. Build
-first, then `test:smoke` loads `dist/` into Chrome via Puppeteer and verifies the
-side panel mounts without throwing. CI runs all of this on every push and pull
-request (see `.github/workflows/ci.yml`) and uploads the packaged `dist/` as a
-build artifact.
+`test:unit` chains a dozen-plus standalone suites with `tsx`, grouped roughly
+like this: the normalization pipeline (sorting, grouping, settings-to-tags),
+the audit timeout/watchdog logic, and a docs-corpus guard that fails if any v1
+rule is undocumented or malformed; page-helper suites for text spacing, focus
+order, outline, vision, and tab state; panel state helpers like the active-tab
+tracker; and the sync layer — the upload client, dashboard-key relay, and
+pending-save queue, plus a pinned ingest-contract test checked against shared
+fixtures in `test/contract/` (see `test/contract/README.md` for the cross-repo
+update protocol). Build first, then `test:smoke` loads `dist/` into Chrome via
+Puppeteer and verifies the side panel mounts without throwing. CI runs all of
+this on every push and pull request (see `.github/workflows/ci.yml`) and
+uploads the packaged `dist/` as a build artifact.
 
 ## How it works
 

@@ -17,6 +17,12 @@ const ok = (name: string, cond: boolean) => checks.push([name, cond]);
 
 const contractDir = fileURLToPath(new URL('./contract', import.meta.url));
 
+// The contract version this extension build speaks. When the portal bumps
+// CONTRACT_VERSION (see test/contract/README.md's update protocol), re-copy
+// the contract/ directory and update this constant in the same commit — the
+// assertion below is what makes an unacknowledged bump fail loudly here.
+const EXPECTED_CONTRACT_VERSION = 1;
+
 function readFixture(relPath: string): unknown {
   return JSON.parse(readFileSync(`${contractDir}/${relPath}`, 'utf8'));
 }
@@ -54,7 +60,16 @@ const result: AuditResult = {
 
 function main(): void {
   const readme = readFileSync(`${contractDir}/README.md`, 'utf8');
-  ok('CONTRACT_VERSION: 1 is recorded in the copied README', /CONTRACT_VERSION: 1/.test(readme));
+  ok(
+    `CONTRACT_VERSION: ${EXPECTED_CONTRACT_VERSION} is recorded in the copied README`,
+    new RegExp(`CONTRACT_VERSION: ${EXPECTED_CONTRACT_VERSION}\\b`).test(readme),
+  );
+
+  const versionMatch = /CONTRACT_VERSION: (\d+)/.exec(readme);
+  ok(
+    `the copied README does not record a different CONTRACT_VERSION than ${EXPECTED_CONTRACT_VERSION}`,
+    versionMatch !== null && Number(versionMatch[1]) === EXPECTED_CONTRACT_VERSION,
+  );
 
   const payload = buildIngestPayload(result, 'Site title');
   const canonical = readFixture('fixtures/valid/canonical.json');
