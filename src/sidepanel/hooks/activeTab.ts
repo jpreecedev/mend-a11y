@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { sendToWorker, type CachedAuditResponse } from '../../lib/messages';
 import type { AuditResult } from '../../lib/types';
+import { createSequencer, shouldResolveForUpdate } from './tabResults';
 
 export interface ActiveTab {
   /** Active tab id in this panel's window, or null if none is resolvable. */
@@ -36,11 +37,22 @@ export function useActiveTab(): ActiveTab {
     loading: true,
   });
   const windowIdRef = useRef<number | null>(null);
+  // The tab id the last committed resolve() settled on. Used to (a) filter
+  // onUpdated events down to the tab actually shown, and (b) is only ever
+  // written right alongside the setState it belongs to.
+  const activeTabIdRef = useRef<number | null>(null);
+  // Guards against out-of-order resolves: several can be in flight at once
+  // (tab activated + window focus + tab updated firing close together), and
+  // nothing about promise resolution order guarantees the newest one lands
+  // last. Each resolve() takes a token when it starts; only the call still
+  // holding the latest token is allowed to commit via setState.
+  const sequencerRef = useRef(createSequencer());
 
   useEffect(() => {
     let cancelled = false;
 
     const resolve = async (): Promise<void> => {
+      const token = sequencerRef.current.begin();
       // Determine which window this panel is in once, then always read the
       // active tab of that window specifically.
       if (windowIdRef.current == null) {
@@ -65,6 +77,8 @@ export function useActiveTab(): ActiveTab {
       const host = hostOf(tab?.url);
 
       if (tabId == null) {
+        if (!sequencerRef.current.isCurrent(token)) return;
+        activeTabIdRef.current = null;
         setState({ tabId: null, host, cached: null, loading: false });
         return;
       }
@@ -77,6 +91,8 @@ export function useActiveTab(): ActiveTab {
         cached = null;
       }
       if (cancelled) return;
+      if (!sequencerRef.current.isCurrent(token)) return;
+      activeTabIdRef.current = tabId;
       setState({ tabId, host, cached, loading: false });
     };
 
@@ -87,11 +103,15 @@ export function useActiveTab(): ActiveTab {
     };
     const onFocus = (): void => void resolve();
     const onUpdated = (
-      _tabId: number,
+      updatedTabId: number,
       changeInfo: chrome.tabs.OnUpdatedInfo,
     ): void => {
       // Re-resolve when the front tab finishes a navigation or its title/url
-      // changes, so a stale result drops to the empty state.
+      // changes, so a stale result drops to the empty state. Ignore updates
+      // for any other tab — onUpdated fires for every tab in every window,
+      // and re-resolving for one that isn't shown here would re-fetch (and
+      // re-render) the panel's own in-view audit for no reason.
+      if (!shouldResolveForUpdate(updatedTabId, activeTabIdRef.current)) return;
       if (changeInfo.status === 'complete' || changeInfo.url) void resolve();
     };
 
