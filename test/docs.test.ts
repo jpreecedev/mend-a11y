@@ -23,6 +23,11 @@ const V1_RULES = [
   'list',
   'listitem',
   'tabindex',
+  'aria-hidden-focus',
+  'aria-allowed-attr',
+  'aria-required-children',
+  'aria-required-parent',
+  'select-name',
 ];
 
 const checks: [string, boolean][] = [];

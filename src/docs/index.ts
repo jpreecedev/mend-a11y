@@ -339,4 +339,90 @@ export const DOCS: Record<string, DocsEntry> = {
     ],
     references: [wcag('2.4.3 Focus Order', 'focus-order')],
   },
+
+  'aria-hidden-focus': {
+    summary:
+      'Make focusable elements inside an aria-hidden container unreachable too — add tabindex="-1" to them, or drop aria-hidden if the content stays visible.',
+    explanation: [
+      `aria-hidden="true" tells assistive tech to skip a chunk of the page entirely, but it does nothing to keyboard focus. If a link or button inside that container can still be tabbed to, a screen reader user lands on a control that was never announced, then has no idea what they just activated.`,
+      `This usually happens with a closed dialog or an off-canvas menu that's left in the DOM and hidden with aria-hidden, while its buttons and links keep their normal tabindex. Either strip focusability from everything inside (tabindex="-1" on each control, restored when the content becomes visible again) or don't hide it from assistive tech in the first place.`,
+    ].join('\n\n'),
+    examples: [
+      {
+        label: 'Closed modal left focusable',
+        before: '<div class="modal" aria-hidden="true">\n  <button class="modal-close">Close</button>\n</div>',
+        after:
+          '<div class="modal" aria-hidden="true">\n  <button class="modal-close" tabindex="-1">Close</button>\n</div>',
+      },
+    ],
+    references: [wcag('4.1.2 Name, Role, Value', 'name-role-value')],
+  },
+
+  'aria-allowed-attr': {
+    summary: "Remove the ARIA attribute, or change the role to one that actually supports it.",
+    explanation: [
+      `Each ARIA role only accepts a specific set of aria-* attributes, and browsers ignore the ones that don't fit. aria-checked on a plain button, for instance, is simply dropped, so a toggle that looks right in the DOM inspector announces nothing about its on/off state.`,
+      `Match the attribute to a role that supports it. A button that toggles is really a switch, so give it role="switch" and the aria-checked stays valid instead of getting silently discarded.`,
+    ].join('\n\n'),
+    examples: [
+      {
+        label: 'Toggle built from a button',
+        before: '<button aria-checked="true">Enable notifications</button>',
+        after: '<button role="switch" aria-checked="true">Enable notifications</button>',
+      },
+    ],
+    references: [wcag('4.1.2 Name, Role, Value', 'name-role-value')],
+  },
+
+  'aria-required-children': {
+    summary:
+      'Give the role its required child roles — a tablist needs tab children, a list needs listitem children, and so on.',
+    explanation: [
+      `Some ARIA roles describe a composite widget, and assistive tech expects specific roles nested inside. role="tablist" with plain <div>s inside isn't a widget a screen reader recognizes as tabs; it reads as an unlabeled group with no way to know how many tabs there are or which is selected.`,
+      `Add the child role the parent expects. If you're building a tab strip, each clickable tab needs role="tab"; a role="list" needs role="listitem" children. This is easy to miss when the visual design uses styled divs rather than semantic list or table markup.`,
+    ].join('\n\n'),
+    examples: [
+      {
+        label: 'Tabs missing child role',
+        before: '<div role="tablist">\n  <div class="tab">Overview</div>\n  <div class="tab">Details</div>\n</div>',
+        after:
+          '<div role="tablist">\n  <div class="tab" role="tab">Overview</div>\n  <div class="tab" role="tab">Details</div>\n</div>',
+      },
+    ],
+    references: [wcag('1.3.1 Info and Relationships', 'info-and-relationships')],
+  },
+
+  'aria-required-parent': {
+    summary: 'Wrap the element in the parent role it requires — an option belongs inside a listbox, a listitem inside a list.',
+    explanation: [
+      `Some roles only make sense inside a specific parent. role="option" sitting on its own, with no role="listbox" wrapping it, leaves a screen reader unable to tell the user they're looking at one choice among several; the "1 of 4" context a real listbox provides is gone.`,
+      `Add the missing wrapper role rather than leaving the child role in isolation. This tends to surface when a component library renders the pieces of a widget in a different order than expected, or when only part of a widget got converted to ARIA.`,
+    ].join('\n\n'),
+    examples: [
+      {
+        label: 'Options without a listbox',
+        before: '<div role="option">Red</div>\n<div role="option">Blue</div>',
+        after: '<div role="listbox">\n  <div role="option">Red</div>\n  <div role="option">Blue</div>\n</div>',
+      },
+    ],
+    references: [wcag('1.3.1 Info and Relationships', 'info-and-relationships')],
+  },
+
+  'select-name': {
+    summary: 'Give the <select> an accessible name with a <label> or aria-label.',
+    explanation: [
+      `A <select> with no name announces as just "combo box" — a screen reader user has to guess what they're choosing, then guess again after picking an option to confirm it worked.`,
+      `A visible <label for> is the simplest fix and matches how sighted users find the field. If there's no room for a visible label, aria-label works, but keep it short and specific to what the field controls.`,
+    ].join('\n\n'),
+    examples: [
+      {
+        label: 'Country picker with no name',
+        before:
+          '<select>\n  <option value="us">United States</option>\n  <option value="ca">Canada</option>\n</select>',
+        after:
+          '<label for="country">Country</label>\n<select id="country">\n  <option value="us">United States</option>\n  <option value="ca">Canada</option>\n</select>',
+      },
+    ],
+    references: [wcag('4.1.2 Name, Role, Value', 'name-role-value')],
+  },
 };
