@@ -88,6 +88,7 @@ export function SettingsScreen({
         value={settings.dashboardApiKey}
         placeholder="mend_…"
         desc="Optional. Generate one on your mend-a11y.com account page. With a key set, audits save to your dashboard when they finish."
+        commitOn="blur"
         onChange={(v) => set('dashboardApiKey', v)}
       />
       {settings.dashboardApiKey.trim() !== '' && (
