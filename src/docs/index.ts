@@ -425,4 +425,169 @@ export const DOCS: Record<string, DocsEntry> = {
     ],
     references: [wcag('4.1.2 Name, Role, Value', 'name-role-value')],
   },
+
+  'input-button-name': {
+    summary: 'Give input buttons a value (or aria-label) so their action is announced, not just "button".',
+    explanation: [
+      `<input type="submit">, type="button", and type="reset"> normally get their label from the value attribute. Drop that attribute and the browser falls back to a generic default in some cases, or nothing at all in others, so a screen reader user hears "button" with no clue what pressing it does.`,
+      `Set value to the action the button performs: "Create account", not "Submit". If you need an icon-only button, use a real <button> element instead, since it can hold both an icon and visually-hidden text, or add aria-label to the input.`,
+    ].join('\n\n'),
+    examples: [
+      {
+        label: 'Submit input with no label',
+        before: '<input type="submit">',
+        after: '<input type="submit" value="Create account">',
+      },
+    ],
+    references: [wcag('4.1.2 Name, Role, Value', 'name-role-value')],
+  },
+
+  'role-img-alt': {
+    summary: 'Give the role="img" element an accessible name with aria-label or aria-labelledby.',
+    explanation: [
+      `role="img" tells assistive tech to treat an element as a single image, usually a CSS background image or an icon font glyph, rather than reading its contents. Do that without also giving it a name, and the "image" announces as blank, which is worse than not marking it up at all.`,
+      `Add aria-label with the same kind of description you'd write for an <img> alt: what the image conveys, not that it's an image. If the element already has visible text that describes it, aria-labelledby pointing at that text works too.`,
+    ].join('\n\n'),
+    examples: [
+      {
+        label: 'Icon rendered as a background image',
+        before: '<div role="img" class="icon-warning"></div>',
+        after: '<div role="img" class="icon-warning" aria-label="Warning"></div>',
+      },
+    ],
+    references: [wcag('1.1.1 Non-text Content', 'non-text-content')],
+  },
+
+  'svg-img-alt': {
+    summary: 'Give the <svg role="img"> an accessible name with a <title> element or aria-label.',
+    explanation: [
+      `An inline SVG marked role="img" is announced as a single image, the same as an <img>, but SVG has no alt attribute. Without a name it's announced as unlabeled artwork, which is easy to miss since the SVG renders visibly fine either way.`,
+      `The most portable fix is a <title> as the SVG's first child, which doubles as a tooltip in most browsers. aria-label works too if you'd rather not touch the SVG's internals.`,
+    ].join('\n\n'),
+    examples: [
+      {
+        label: 'Icon SVG with no name',
+        before: '<svg role="img" viewBox="0 0 24 24">\n  <path d="M12 2L2 22h20z"></path>\n</svg>',
+        after:
+          '<svg role="img" viewBox="0 0 24 24">\n  <title>Warning</title>\n  <path d="M12 2L2 22h20z"></path>\n</svg>',
+      },
+    ],
+    references: [wcag('1.1.1 Non-text Content', 'non-text-content')],
+  },
+
+  'autocomplete-valid': {
+    summary: 'Use a real autocomplete token ("given-name", "email", …), not a made-up one.',
+    explanation: [
+      `The autocomplete attribute has a fixed vocabulary of tokens the browser understands; anything else is silently ignored. That breaks two things at once: browser autofill stops offering to fill the field, and assistive tech that shows an icon or hint based on the field's purpose has nothing to go on.`,
+      `Match the token to what the field actually collects: given-name, family-name, email, tel, street-address, and so on are all defined values. A field named firstName in your code doesn't mean autocomplete="fname" is valid; the token vocabulary is independent of your naming.`,
+    ].join('\n\n'),
+    examples: [
+      {
+        label: 'Made-up token',
+        before: '<input type="text" name="firstName" autocomplete="fname">',
+        after: '<input type="text" name="firstName" autocomplete="given-name">',
+      },
+    ],
+    references: [wcag('1.3.5 Identify Input Purpose', 'identify-input-purpose')],
+  },
+
+  'th-has-data-cells': {
+    summary: "Give the table real data cells (<td>) for its headers to describe — don't mark every cell as <th>.",
+    explanation: [
+      `A <th> exists to label data, so a table where every cell is a <th> and no <td> exists leaves the headers with nothing to be "of." Screen reader users navigating by column or row header get announcements with no data attached.`,
+      `Reserve <th> for the row and column headers, and use <td> for the values. This usually comes from a table built for visual weight (making everything bold by using <th> everywhere) rather than for structure.`,
+    ].join('\n\n'),
+    examples: [
+      {
+        label: 'Every cell marked as a header',
+        before: '<table>\n  <tr><th>Name</th><th>Age</th></tr>\n  <tr><th>Ada</th><th>36</th></tr>\n</table>',
+        after: '<table>\n  <tr><th>Name</th><th>Age</th></tr>\n  <tr><td>Ada</td><td>36</td></tr>\n</table>',
+      },
+    ],
+    references: [wcag('1.3.1 Info and Relationships', 'info-and-relationships')],
+  },
+
+  'td-headers-attr': {
+    summary: 'Make each headers attribute point at a <th> id that actually exists in the table.',
+    explanation: [
+      `The headers attribute on a <td> is how complex tables tell a screen reader which header cells describe it, by id. A typo, or an id left over from a table that got restructured, means the reader announces the wrong header, or none, when the user moves to that cell.`,
+      `Keep header ids and headers references in sync. For simple tables, scope="col" or scope="row" is usually enough and avoids the id bookkeeping entirely; reach for headers only when a cell is described by more than one header, like a table with both row and column groupings.`,
+    ].join('\n\n'),
+    examples: [
+      {
+        label: 'headers pointing at the wrong id',
+        before:
+          '<table>\n  <tr><th id="name">Name</th><th id="age">Age</th></tr>\n  <tr><td headers="fullname">Ada</td><td>36</td></tr>\n</table>',
+        after:
+          '<table>\n  <tr><th id="name">Name</th><th id="age">Age</th></tr>\n  <tr><td headers="name">Ada</td><td headers="age">36</td></tr>\n</table>',
+      },
+    ],
+    references: [wcag('1.3.1 Info and Relationships', 'info-and-relationships')],
+  },
+
+  'definition-list': {
+    summary: "Keep a <dl> to only its <dt>/<dd> pairs (or a wrapping <div>) — move anything else outside it.",
+    explanation: [
+      `A <dl> is a specific structure: terms and their descriptions. Screen readers rely on that structure to announce "term" and "definition" pairs. Drop an unrelated <p> or heading inside the list and the pairing breaks, so the reader can't tell which text belongs to which.`,
+      `Move anything that isn't a <dt>, a <dd>, or a <div> wrapping a <dt>/<dd> pair outside the list. If you need a note or a caption near the list, put it before or after the <dl>, not inside it.`,
+    ].join('\n\n'),
+    examples: [
+      {
+        label: 'Stray paragraph inside a definition list',
+        before: '<dl>\n  <dt>HTML</dt>\n  <dd>HyperText Markup Language</dd>\n  <p>See also: XML</p>\n</dl>',
+        after: '<dl>\n  <dt>HTML</dt>\n  <dd>HyperText Markup Language</dd>\n</dl>\n<p>See also: XML</p>',
+      },
+    ],
+    references: [wcag('1.3.1 Info and Relationships', 'info-and-relationships')],
+  },
+
+  dlitem: {
+    summary: "Wrap the <dt>/<dd> in a <dl> so it's recognized as part of a definition list.",
+    explanation: [
+      `A <dt> or <dd> outside a <dl> has no list to belong to, the same way an <li> outside a <ul> loses its list context. Assistive tech may not announce it as a term or definition at all, just as unstructured text.`,
+      `The fix is structural: put a <dl> around the group of <dt>/<dd> pairs. This usually happens when a wrapper <div> was added between the list and its items, or a glossary was built without the list element in the first place.`,
+    ].join('\n\n'),
+    examples: [
+      {
+        label: 'Terms outside a definition list',
+        before: '<div class="glossary">\n  <dt>HTML</dt>\n  <dd>HyperText Markup Language</dd>\n</div>',
+        after: '<dl class="glossary">\n  <dt>HTML</dt>\n  <dd>HyperText Markup Language</dd>\n</dl>',
+      },
+    ],
+    references: [wcag('1.3.1 Info and Relationships', 'info-and-relationships')],
+  },
+
+  'scrollable-region-focusable': {
+    summary: 'Make the scrollable container keyboard-reachable — add tabindex="0" so arrow keys can scroll it.',
+    explanation: [
+      `A div with overflow: auto or scroll and no way to focus it is invisible to keyboard users: a mouse can drag the scrollbar, but there's nothing in the tab order to land on, so the arrow keys have no target and the content inside is unreachable.`,
+      `Add tabindex="0" to the scrollable element itself so it joins the tab order; once it's focused, arrow keys scroll it the way they would a native textarea. This matters most for long embedded content, terms-and-conditions boxes, and code snippets in a fixed-height panel.`,
+    ].join('\n\n'),
+    examples: [
+      {
+        label: 'Scrollable panel with no keyboard access',
+        before:
+          '<div class="terms" style="overflow-y: scroll; height: 200px;">\n  <p>Long terms and conditions text…</p>\n</div>',
+        after:
+          '<div class="terms" style="overflow-y: scroll; height: 200px;" tabindex="0">\n  <p>Long terms and conditions text…</p>\n</div>',
+      },
+    ],
+    references: [wcag('2.1.1 Keyboard', 'keyboard')],
+  },
+
+  'image-redundant-alt': {
+    summary: "Empty the image's alt if adjacent text already says the same thing, so it isn't announced twice.",
+    explanation: [
+      `When an image sits next to text that already describes it, non-empty alt makes a screen reader say the same thing twice: "Cart icon, Cart" for a single link. It's not wrong information, just noise that makes every one of these controls slower to listen to.`,
+      `If the text is genuinely redundant, set the image's alt to empty so only the text is announced once. If the image conveys something the text doesn't, alt is still the right place for that extra detail. This is common on icon-plus-label buttons and links where the icon is decorative next to a text label.`,
+    ].join('\n\n'),
+    examples: [
+      {
+        label: 'Icon and text saying the same thing',
+        before: '<a href="/cart"><img src="cart.svg" alt="Cart"> Cart</a>',
+        after: '<a href="/cart"><img src="cart.svg" alt=""> Cart</a>',
+      },
+    ],
+    references: [wcag('1.1.1 Non-text Content', 'non-text-content')],
+  },
 };

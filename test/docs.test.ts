@@ -28,6 +28,16 @@ const V1_RULES = [
   'aria-required-children',
   'aria-required-parent',
   'select-name',
+  'input-button-name',
+  'role-img-alt',
+  'svg-img-alt',
+  'autocomplete-valid',
+  'th-has-data-cells',
+  'td-headers-attr',
+  'definition-list',
+  'dlitem',
+  'scrollable-region-focusable',
+  'image-redundant-alt',
 ];
 
 const checks: [string, boolean][] = [];
