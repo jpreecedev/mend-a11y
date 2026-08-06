@@ -32,11 +32,11 @@ const V1_RULES = [
   'role-img-alt',
   'svg-img-alt',
   'autocomplete-valid',
-  'th-has-data-cells',
+  'input-image-alt',
   'td-headers-attr',
   'definition-list',
   'dlitem',
-  'scrollable-region-focusable',
+  'area-alt',
   'image-redundant-alt',
 ];
 

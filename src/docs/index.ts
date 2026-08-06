@@ -427,16 +427,16 @@ export const DOCS: Record<string, DocsEntry> = {
   },
 
   'input-button-name': {
-    summary: 'Give input buttons a value (or aria-label) so their action is announced, not just "button".',
+    summary: 'Give type="button" inputs a value, and use a real value everywhere else too, not the browser default.',
     explanation: [
-      `<input type="submit">, type="button", and type="reset"> normally get their label from the value attribute. Drop that attribute and the browser falls back to a generic default in some cases, or nothing at all in others, so a screen reader user hears "button" with no clue what pressing it does.`,
-      `Set value to the action the button performs: "Create account", not "Submit". If you need an icon-only button, use a real <button> element instead, since it can hold both an icon and visually-hidden text, or add aria-label to the input.`,
+      `<input type="submit"> and type="reset"> get a browser-default label ("Submit", "Reset") when value is missing, so they technically pass this check on their own. type="button"> gets no such default: with no value, it announces as just "button", and the user has no idea what pressing it does.`,
+      `Set value to the action either way. The default "Submit" is accessible but says nothing about what's being submitted, so a page with three separate forms ends up with three buttons that all sound identical. Write the real action: "Create account", not "Submit".`,
     ].join('\n\n'),
     examples: [
       {
-        label: 'Submit input with no label',
-        before: '<input type="submit">',
-        after: '<input type="submit" value="Create account">',
+        label: 'Button input with no label',
+        before: '<input type="button">',
+        after: '<input type="button" value="Create account">',
       },
     ],
     references: [wcag('4.1.2 Name, Role, Value', 'name-role-value')],
@@ -491,20 +491,20 @@ export const DOCS: Record<string, DocsEntry> = {
     references: [wcag('1.3.5 Identify Input Purpose', 'identify-input-purpose')],
   },
 
-  'th-has-data-cells': {
-    summary: "Give the table real data cells (<td>) for its headers to describe — don't mark every cell as <th>.",
+  'input-image-alt': {
+    summary: 'Add an alt attribute to the image input describing the action it performs.',
     explanation: [
-      `A <th> exists to label data, so a table where every cell is a <th> and no <td> exists leaves the headers with nothing to be "of." Screen reader users navigating by column or row header get announcements with no data attached.`,
-      `Reserve <th> for the row and column headers, and use <td> for the values. This usually comes from a table built for visual weight (making everything bold by using <th> everywhere) rather than for structure.`,
+      `<input type="image"> renders a picture that acts as a submit button, so a screen reader announces it the way it would any other button: by its accessible name. With no alt, that name is missing, and depending on the browser the user hears either "button" with nothing else, or the image's file name read out as if it meant something.`,
+      `Write the alt the same way you'd label a real button: the action it takes, not a description of the picture. "Search," not "magnifying glass icon."`,
     ].join('\n\n'),
     examples: [
       {
-        label: 'Every cell marked as a header',
-        before: '<table>\n  <tr><th>Name</th><th>Age</th></tr>\n  <tr><th>Ada</th><th>36</th></tr>\n</table>',
-        after: '<table>\n  <tr><th>Name</th><th>Age</th></tr>\n  <tr><td>Ada</td><td>36</td></tr>\n</table>',
+        label: 'Image submit button with no name',
+        before: '<form>\n  <input type="image" src="go.png">\n</form>',
+        after: '<form>\n  <input type="image" src="go.png" alt="Search">\n</form>',
       },
     ],
-    references: [wcag('1.3.1 Info and Relationships', 'info-and-relationships')],
+    references: [wcag('1.1.1 Non-text Content', 'non-text-content')],
   },
 
   'td-headers-attr': {
@@ -557,22 +557,22 @@ export const DOCS: Record<string, DocsEntry> = {
     references: [wcag('1.3.1 Info and Relationships', 'info-and-relationships')],
   },
 
-  'scrollable-region-focusable': {
-    summary: 'Make the scrollable container keyboard-reachable — add tabindex="0" so arrow keys can scroll it.',
+  'area-alt': {
+    summary: 'Give every <area> in an image map alt text describing where it leads.',
     explanation: [
-      `A div with overflow: auto or scroll and no way to focus it is invisible to keyboard users: a mouse can drag the scrollbar, but there's nothing in the tab order to land on, so the arrow keys have no target and the content inside is unreachable.`,
-      `Add tabindex="0" to the scrollable element itself so it joins the tab order; once it's focused, arrow keys scroll it the way they would a native textarea. This matters most for long embedded content, terms-and-conditions boxes, and code snippets in a fixed-height panel.`,
+      `Each <area> in a <map> is its own link, laid over a region of the image. A screen reader user tabbing through the page hits it like any other link, but with no alt it has no text at all, so it's announced as a blank, unusable link.`,
+      `The image the map sits on can have its own alt (describing the image as a whole), but that doesn't cover the individual areas: each one needs its own alt describing where that specific region leads, the same way you'd write link text.`,
     ].join('\n\n'),
     examples: [
       {
-        label: 'Scrollable panel with no keyboard access',
+        label: 'Image map region with no link text',
         before:
-          '<div class="terms" style="overflow-y: scroll; height: 200px;">\n  <p>Long terms and conditions text…</p>\n</div>',
+          '<img src="map.png" usemap="#m" alt="Office map">\n<map name="m">\n  <area shape="rect" coords="0,0,50,50" href="/a">\n</map>',
         after:
-          '<div class="terms" style="overflow-y: scroll; height: 200px;" tabindex="0">\n  <p>Long terms and conditions text…</p>\n</div>',
+          '<img src="map.png" usemap="#m" alt="Office map">\n<map name="m">\n  <area shape="rect" coords="0,0,50,50" href="/a" alt="Building A">\n</map>',
       },
     ],
-    references: [wcag('2.1.1 Keyboard', 'keyboard')],
+    references: [wcag('2.4.4 Link Purpose (In Context)', 'link-purpose-in-context')],
   },
 
   'image-redundant-alt': {
