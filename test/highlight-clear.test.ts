@@ -38,7 +38,7 @@ const noopEvent = { addListener: () => {} };
   storage: { local: { get: async () => ({}), set: async () => {}, remove: async () => {} }, session: sessionArea },
   action: { onClicked: noopEvent },
   tabs: { onUpdated: noopEvent, onRemoved: noopEvent, get: async () => ({ title: 'Example' }) },
-  runtime: { onConnect: noopEvent, onMessage: noopEvent },
+  runtime: { id: 'test-ext', onConnect: noopEvent, onMessage: noopEvent },
   sidePanel: undefined,
   scripting: {
     executeScript: async (opts: { target: { tabId: number }; func: (...args: unknown[]) => unknown }) => {
@@ -51,7 +51,13 @@ const noopEvent = { addListener: () => {} };
 async function main(): Promise<void> {
   const { handleMessage } = await import('../src/background/service-worker');
   const { clearHighlightInPage, highlightInPage } = await import('../src/lib/highlight');
-  const sender = { origin: undefined } as chrome.runtime.MessageSender;
+  // Panel-shaped sender: the guard (plan 012) requires a chrome-extension://
+  // sender.url and a matching sender.id for non-relay messages.
+  const sender = {
+    id: 'test-ext',
+    tab: undefined,
+    url: 'chrome-extension://test/src/sidepanel/index.html',
+  } as unknown as chrome.runtime.MessageSender;
   void DEFAULT_SETTINGS satisfies Settings;
 
   // --- HIGHLIGHT on tab 7 stores the id and injects into tab 7 ---
