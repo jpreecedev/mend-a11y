@@ -137,13 +137,10 @@ export function App() {
     // clear any page overlay explicitly when the panel document is hidden or
     // unloaded. pagehide is the dependable unload signal for this context.
     const clearOnLeave = (): void => {
-      const id = activeIdForRun.current;
-      if (id != null) {
-        try {
-          void chrome.runtime.sendMessage({ type: 'CLEAR_HIGHLIGHT', tabId: id });
-        } catch {
-          /* worker may already be tearing down; the port disconnect is the backstop */
-        }
+      try {
+        void chrome.runtime.sendMessage({ type: 'CLEAR_HIGHLIGHT' });
+      } catch {
+        /* worker may already be tearing down; the port disconnect is the backstop */
       }
     };
     const onHide = (): void => {
@@ -374,8 +371,8 @@ export function App() {
   );
 
   const clearHighlight = useCallback(() => {
-    if (tabId != null) void sendToWorker({ type: 'CLEAR_HIGHLIGHT', tabId });
-  }, [tabId]);
+    void sendToWorker({ type: 'CLEAR_HIGHLIGHT' });
+  }, []);
 
   const toggleTextSpacing = useCallback(async () => {
     if (tabId == null) return;
