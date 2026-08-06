@@ -15,9 +15,16 @@
   --ap-border-strong: #c9bfa8;
   --ap-fg: #1d1a14;
   --ap-fg-muted: #6c6555;
-  --ap-fg-subtle: #9a917f;
-  --ap-accent: #c4502c;
+  /* Darkened from #9a917f: at that value, .kbd-hint text read 2.93:1 against
+     --ap-surface, below the 4.5:1 AA floor. Panel self-audit, plan 018. */
+  --ap-fg-subtle: #79705f;
+  /* Darkened from #c4502c: at that value, .link-btn text read 4.36:1 against
+     --ap-surface, below the 4.5:1 AA floor. Panel self-audit, plan 018. */
+  --ap-accent: #be4e2b;
   --ap-accent-hover: #a83f1f;
+  /* Text/icon color for content painted on top of --ap-accent. White is fine
+     here in light theme; dark theme needs a different value (see below). */
+  --ap-on-accent: #ffffff;
 
   --ap-sev-critical-fg: #a02616;
   --ap-sev-serious-fg: #9c4308;
@@ -47,9 +54,16 @@
   --ap-border-strong: #4f4631;
   --ap-fg: #f3ecdb;
   --ap-fg-muted: #b3a98f;
-  --ap-fg-subtle: #8a8069;
+  /* Lightened from #8a8069: at that value, .kbd-hint text read 4.38:1 against
+     --ap-surface, below the 4.5:1 AA floor. Panel self-audit, plan 018. */
+  --ap-fg-subtle: #8e846c;
   --ap-accent: #e8794f;
   --ap-accent-hover: #f08a62;
+  /* --ap-accent stays bright here because it also serves as foreground text
+     elsewhere (e.g. .link-btn) at a healthy 6.4:1 against --ap-bg. But white
+     text on top of it (.btn.primary) only read 2.88:1 - dark ink reads
+     6.0:1 on the same background instead. Panel self-audit, plan 018. */
+  --ap-on-accent: #1d1a14;
 
   --ap-sev-critical-fg: #f08a7a;
   --ap-sev-serious-fg: #e0a05f;
@@ -181,7 +195,7 @@ pre {
 .btn.primary {
   background: var(--ap-accent);
   border-color: var(--ap-accent);
-  color: #fff;
+  color: var(--ap-on-accent);
 }
 .btn.primary:hover {
   background: var(--ap-accent-hover);
