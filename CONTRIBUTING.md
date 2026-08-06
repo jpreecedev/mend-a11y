@@ -78,9 +78,13 @@ Match the shape and tone of the existing entries. Here's the bar:
 - `npm run typecheck` must pass. The build runs in strict mode with
   `noUncheckedIndexedAccess` and `noUnusedLocals`; treat type errors as build
   failures.
-- The extension makes no network requests. Don't add `fetch`, analytics,
-  remote fonts, or any outbound call. This is a hard product constraint, not a
-  preference.
+- The only outbound request anywhere in the codebase is the user-configured
+  dashboard sync POST to `{dashboardUrl}/api/ingest` in `src/lib/sync.ts`,
+  gated on an API key the user typed into settings. No telemetry, no
+  analytics, no remote fonts, no other endpoint. That request's wire format is
+  a pinned cross-repo contract — see `test/contract/README.md` before changing
+  it. Adding any other egress is a product decision, not something to slip in
+  as a code change.
 - The panel must keep passing its own audit: real `<button>`/`<a>` elements,
   labels on inputs, `aria-*` where roles need it, visible focus, and AA
   contrast in both themes.
@@ -91,7 +95,3 @@ Match the shape and tone of the existing entries. Here's the bar:
 
 Open an issue with the page you audited (or a minimal reproduction), what you
 expected, and what happened. Screenshots of the panel help.
-
-## Code of conduct
-
-This project follows the [Contributor Covenant](./CODE_OF_CONDUCT.md).
