@@ -339,4 +339,255 @@ export const DOCS: Record<string, DocsEntry> = {
     ],
     references: [wcag('2.4.3 Focus Order', 'focus-order')],
   },
+
+  'aria-hidden-focus': {
+    summary:
+      'Make focusable elements inside an aria-hidden container unreachable too — add tabindex="-1" to them, or drop aria-hidden if the content stays visible.',
+    explanation: [
+      `aria-hidden="true" tells assistive tech to skip a chunk of the page entirely, but it does nothing to keyboard focus. If a link or button inside that container can still be tabbed to, a screen reader user lands on a control that was never announced, then has no idea what they just activated.`,
+      `This usually happens with a closed dialog or an off-canvas menu that's left in the DOM and hidden with aria-hidden, while its buttons and links keep their normal tabindex. Either strip focusability from everything inside (tabindex="-1" on each control, restored when the content becomes visible again) or don't hide it from assistive tech in the first place.`,
+    ].join('\n\n'),
+    examples: [
+      {
+        label: 'Closed modal left focusable',
+        before: '<div class="modal" aria-hidden="true">\n  <button class="modal-close">Close</button>\n</div>',
+        after:
+          '<div class="modal" aria-hidden="true">\n  <button class="modal-close" tabindex="-1">Close</button>\n</div>',
+      },
+    ],
+    references: [wcag('4.1.2 Name, Role, Value', 'name-role-value')],
+  },
+
+  'aria-allowed-attr': {
+    summary: "Remove the ARIA attribute, or change the role to one that actually supports it.",
+    explanation: [
+      `Each ARIA role only accepts a specific set of aria-* attributes, and browsers ignore the ones that don't fit. aria-checked on a plain button, for instance, is simply dropped, so a toggle that looks right in the DOM inspector announces nothing about its on/off state.`,
+      `Match the attribute to a role that supports it. A button that toggles is really a switch, so give it role="switch" and the aria-checked stays valid instead of getting silently discarded.`,
+    ].join('\n\n'),
+    examples: [
+      {
+        label: 'Toggle built from a button',
+        before: '<button aria-checked="true">Enable notifications</button>',
+        after: '<button role="switch" aria-checked="true">Enable notifications</button>',
+      },
+    ],
+    references: [wcag('4.1.2 Name, Role, Value', 'name-role-value')],
+  },
+
+  'aria-required-children': {
+    summary:
+      'Give the role its required child roles — a tablist needs tab children, a list needs listitem children, and so on.',
+    explanation: [
+      `Some ARIA roles describe a composite widget, and assistive tech expects specific roles nested inside. role="tablist" with plain <div>s inside isn't a widget a screen reader recognizes as tabs; it reads as an unlabeled group with no way to know how many tabs there are or which is selected.`,
+      `Add the child role the parent expects. If you're building a tab strip, each clickable tab needs role="tab"; a role="list" needs role="listitem" children. This is easy to miss when the visual design uses styled divs rather than semantic list or table markup.`,
+    ].join('\n\n'),
+    examples: [
+      {
+        label: 'Tabs missing child role',
+        before: '<div role="tablist">\n  <div class="tab">Overview</div>\n  <div class="tab">Details</div>\n</div>',
+        after:
+          '<div role="tablist">\n  <div class="tab" role="tab">Overview</div>\n  <div class="tab" role="tab">Details</div>\n</div>',
+      },
+    ],
+    references: [wcag('1.3.1 Info and Relationships', 'info-and-relationships')],
+  },
+
+  'aria-required-parent': {
+    summary: 'Wrap the element in the parent role it requires — an option belongs inside a listbox, a listitem inside a list.',
+    explanation: [
+      `Some roles only make sense inside a specific parent. role="option" sitting on its own, with no role="listbox" wrapping it, leaves a screen reader unable to tell the user they're looking at one choice among several; the "1 of 4" context a real listbox provides is gone.`,
+      `Add the missing wrapper role rather than leaving the child role in isolation. This tends to surface when a component library renders the pieces of a widget in a different order than expected, or when only part of a widget got converted to ARIA.`,
+    ].join('\n\n'),
+    examples: [
+      {
+        label: 'Options without a listbox',
+        before: '<div role="option">Red</div>\n<div role="option">Blue</div>',
+        after: '<div role="listbox">\n  <div role="option">Red</div>\n  <div role="option">Blue</div>\n</div>',
+      },
+    ],
+    references: [wcag('1.3.1 Info and Relationships', 'info-and-relationships')],
+  },
+
+  'select-name': {
+    summary: 'Give the <select> an accessible name with a <label> or aria-label.',
+    explanation: [
+      `A <select> with no name announces as just "combo box" — a screen reader user has to guess what they're choosing, then guess again after picking an option to confirm it worked.`,
+      `A visible <label for> is the simplest fix and matches how sighted users find the field. If there's no room for a visible label, aria-label works, but keep it short and specific to what the field controls.`,
+    ].join('\n\n'),
+    examples: [
+      {
+        label: 'Country picker with no name',
+        before:
+          '<select>\n  <option value="us">United States</option>\n  <option value="ca">Canada</option>\n</select>',
+        after:
+          '<label for="country">Country</label>\n<select id="country">\n  <option value="us">United States</option>\n  <option value="ca">Canada</option>\n</select>',
+      },
+    ],
+    references: [wcag('4.1.2 Name, Role, Value', 'name-role-value')],
+  },
+
+  'input-button-name': {
+    summary: 'Give type="button" inputs a value, and use a real value everywhere else too, not the browser default.',
+    explanation: [
+      `<input type="submit"> and type="reset"> get a browser-default label ("Submit", "Reset") when value is missing, so they technically pass this check on their own. type="button"> gets no such default: with no value, it announces as just "button", and the user has no idea what pressing it does.`,
+      `Set value to the action either way. The default "Submit" is accessible but says nothing about what's being submitted, so a page with three separate forms ends up with three buttons that all sound identical. Write the real action: "Create account", not "Submit".`,
+    ].join('\n\n'),
+    examples: [
+      {
+        label: 'Button input with no label',
+        before: '<input type="button">',
+        after: '<input type="button" value="Create account">',
+      },
+    ],
+    references: [wcag('4.1.2 Name, Role, Value', 'name-role-value')],
+  },
+
+  'role-img-alt': {
+    summary: 'Give the role="img" element an accessible name with aria-label or aria-labelledby.',
+    explanation: [
+      `role="img" tells assistive tech to treat an element as a single image, usually a CSS background image or an icon font glyph, rather than reading its contents. Do that without also giving it a name, and the "image" announces as blank, which is worse than not marking it up at all.`,
+      `Add aria-label with the same kind of description you'd write for an <img> alt: what the image conveys, not that it's an image. If the element already has visible text that describes it, aria-labelledby pointing at that text works too.`,
+    ].join('\n\n'),
+    examples: [
+      {
+        label: 'Icon rendered as a background image',
+        before: '<div role="img" class="icon-warning"></div>',
+        after: '<div role="img" class="icon-warning" aria-label="Warning"></div>',
+      },
+    ],
+    references: [wcag('1.1.1 Non-text Content', 'non-text-content')],
+  },
+
+  'svg-img-alt': {
+    summary: 'Give the <svg role="img"> an accessible name with a <title> element or aria-label.',
+    explanation: [
+      `An inline SVG marked role="img" is announced as a single image, the same as an <img>, but SVG has no alt attribute. Without a name it's announced as unlabeled artwork, which is easy to miss since the SVG renders visibly fine either way.`,
+      `The most portable fix is a <title> as the SVG's first child, which doubles as a tooltip in most browsers. aria-label works too if you'd rather not touch the SVG's internals.`,
+    ].join('\n\n'),
+    examples: [
+      {
+        label: 'Icon SVG with no name',
+        before: '<svg role="img" viewBox="0 0 24 24">\n  <path d="M12 2L2 22h20z"></path>\n</svg>',
+        after:
+          '<svg role="img" viewBox="0 0 24 24">\n  <title>Warning</title>\n  <path d="M12 2L2 22h20z"></path>\n</svg>',
+      },
+    ],
+    references: [wcag('1.1.1 Non-text Content', 'non-text-content')],
+  },
+
+  'autocomplete-valid': {
+    summary: 'Use a real autocomplete token ("given-name", "email", …), not a made-up one.',
+    explanation: [
+      `The autocomplete attribute has a fixed vocabulary of tokens the browser understands; anything else is silently ignored. That breaks two things at once: browser autofill stops offering to fill the field, and assistive tech that shows an icon or hint based on the field's purpose has nothing to go on.`,
+      `Match the token to what the field actually collects: given-name, family-name, email, tel, street-address, and so on are all defined values. A field named firstName in your code doesn't mean autocomplete="fname" is valid; the token vocabulary is independent of your naming.`,
+    ].join('\n\n'),
+    examples: [
+      {
+        label: 'Made-up token',
+        before: '<input type="text" name="firstName" autocomplete="fname">',
+        after: '<input type="text" name="firstName" autocomplete="given-name">',
+      },
+    ],
+    references: [wcag('1.3.5 Identify Input Purpose', 'identify-input-purpose')],
+  },
+
+  'input-image-alt': {
+    summary: 'Add an alt attribute to the image input describing the action it performs.',
+    explanation: [
+      `<input type="image"> renders a picture that acts as a submit button, so a screen reader announces it the way it would any other button: by its accessible name. With no alt, that name is missing, and depending on the browser the user hears either "button" with nothing else, or the image's file name read out as if it meant something.`,
+      `Write the alt the same way you'd label a real button: the action it takes, not a description of the picture. "Search," not "magnifying glass icon."`,
+    ].join('\n\n'),
+    examples: [
+      {
+        label: 'Image submit button with no name',
+        before: '<form>\n  <input type="image" src="go.png">\n</form>',
+        after: '<form>\n  <input type="image" src="go.png" alt="Search">\n</form>',
+      },
+    ],
+    references: [wcag('1.1.1 Non-text Content', 'non-text-content')],
+  },
+
+  'td-headers-attr': {
+    summary: 'Make each headers attribute point at a <th> id that actually exists in the table.',
+    explanation: [
+      `The headers attribute on a <td> is how complex tables tell a screen reader which header cells describe it, by id. A typo, or an id left over from a table that got restructured, means the reader announces the wrong header, or none, when the user moves to that cell.`,
+      `Keep header ids and headers references in sync. For simple tables, scope="col" or scope="row" is usually enough and avoids the id bookkeeping entirely; reach for headers only when a cell is described by more than one header, like a table with both row and column groupings.`,
+    ].join('\n\n'),
+    examples: [
+      {
+        label: 'headers pointing at the wrong id',
+        before:
+          '<table>\n  <tr><th id="name">Name</th><th id="age">Age</th></tr>\n  <tr><td headers="fullname">Ada</td><td>36</td></tr>\n</table>',
+        after:
+          '<table>\n  <tr><th id="name">Name</th><th id="age">Age</th></tr>\n  <tr><td headers="name">Ada</td><td headers="age">36</td></tr>\n</table>',
+      },
+    ],
+    references: [wcag('1.3.1 Info and Relationships', 'info-and-relationships')],
+  },
+
+  'definition-list': {
+    summary: "Keep a <dl> to only its <dt>/<dd> pairs (or a wrapping <div>) — move anything else outside it.",
+    explanation: [
+      `A <dl> is a specific structure: terms and their descriptions. Screen readers rely on that structure to announce "term" and "definition" pairs. Drop an unrelated <p> or heading inside the list and the pairing breaks, so the reader can't tell which text belongs to which.`,
+      `Move anything that isn't a <dt>, a <dd>, or a <div> wrapping a <dt>/<dd> pair outside the list. If you need a note or a caption near the list, put it before or after the <dl>, not inside it.`,
+    ].join('\n\n'),
+    examples: [
+      {
+        label: 'Stray paragraph inside a definition list',
+        before: '<dl>\n  <dt>HTML</dt>\n  <dd>HyperText Markup Language</dd>\n  <p>See also: XML</p>\n</dl>',
+        after: '<dl>\n  <dt>HTML</dt>\n  <dd>HyperText Markup Language</dd>\n</dl>\n<p>See also: XML</p>',
+      },
+    ],
+    references: [wcag('1.3.1 Info and Relationships', 'info-and-relationships')],
+  },
+
+  dlitem: {
+    summary: "Wrap the <dt>/<dd> in a <dl> so it's recognized as part of a definition list.",
+    explanation: [
+      `A <dt> or <dd> outside a <dl> has no list to belong to, the same way an <li> outside a <ul> loses its list context. Assistive tech may not announce it as a term or definition at all, just as unstructured text.`,
+      `The fix is structural: put a <dl> around the group of <dt>/<dd> pairs. This usually happens when a wrapper <div> was added between the list and its items, or a glossary was built without the list element in the first place.`,
+    ].join('\n\n'),
+    examples: [
+      {
+        label: 'Terms outside a definition list',
+        before: '<div class="glossary">\n  <dt>HTML</dt>\n  <dd>HyperText Markup Language</dd>\n</div>',
+        after: '<dl class="glossary">\n  <dt>HTML</dt>\n  <dd>HyperText Markup Language</dd>\n</dl>',
+      },
+    ],
+    references: [wcag('1.3.1 Info and Relationships', 'info-and-relationships')],
+  },
+
+  'area-alt': {
+    summary: 'Give every <area> in an image map alt text describing where it leads.',
+    explanation: [
+      `Each <area> in a <map> is its own link, laid over a region of the image. A screen reader user tabbing through the page hits it like any other link, but with no alt it has no text at all, so it's announced as a blank, unusable link.`,
+      `The image the map sits on can have its own alt (describing the image as a whole), but that doesn't cover the individual areas: each one needs its own alt describing where that specific region leads, the same way you'd write link text.`,
+    ].join('\n\n'),
+    examples: [
+      {
+        label: 'Image map region with no link text',
+        before:
+          '<img src="map.png" usemap="#m" alt="Office map">\n<map name="m">\n  <area shape="rect" coords="0,0,50,50" href="/a">\n</map>',
+        after:
+          '<img src="map.png" usemap="#m" alt="Office map">\n<map name="m">\n  <area shape="rect" coords="0,0,50,50" href="/a" alt="Building A">\n</map>',
+      },
+    ],
+    references: [wcag('2.4.4 Link Purpose (In Context)', 'link-purpose-in-context')],
+  },
+
+  'image-redundant-alt': {
+    summary: "Empty the image's alt if adjacent text already says the same thing, so it isn't announced twice.",
+    explanation: [
+      `When an image sits next to text that already describes it, non-empty alt makes a screen reader say the same thing twice: "Cart icon, Cart" for a single link. It's not wrong information, just noise that makes every one of these controls slower to listen to.`,
+      `If the text is genuinely redundant, set the image's alt to empty so only the text is announced once. If the image conveys something the text doesn't, alt is still the right place for that extra detail. This is common on icon-plus-label buttons and links where the icon is decorative next to a text label.`,
+    ].join('\n\n'),
+    examples: [
+      {
+        label: 'Icon and text saying the same thing',
+        before: '<a href="/cart"><img src="cart.svg" alt="Cart"> Cart</a>',
+        after: '<a href="/cart"><img src="cart.svg" alt=""> Cart</a>',
+      },
+    ],
+    references: [wcag('1.1.1 Non-text Content', 'non-text-content')],
+  },
 };

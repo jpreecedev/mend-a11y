@@ -23,6 +23,21 @@ const V1_RULES = [
   'list',
   'listitem',
   'tabindex',
+  'aria-hidden-focus',
+  'aria-allowed-attr',
+  'aria-required-children',
+  'aria-required-parent',
+  'select-name',
+  'input-button-name',
+  'role-img-alt',
+  'svg-img-alt',
+  'autocomplete-valid',
+  'input-image-alt',
+  'td-headers-attr',
+  'definition-list',
+  'dlitem',
+  'area-alt',
+  'image-redundant-alt',
 ];
 
 const checks: [string, boolean][] = [];
