@@ -16,17 +16,17 @@ starting, honor its STOP conditions, and update your row when done.
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| [010](010-panel-tab-state.md) | Make the panel's per-tab result state track reality | P1 | M | — | TODO |
+| [010](010-panel-tab-state.md) | Make the panel's per-tab result state track reality | P1 | M | — | IN PROGRESS |
 | [011](011-highlight-orphan.md) | Clear the highlight overlay on the tab that actually has it | P1 | S | — | TODO |
 | [012](012-message-channel-hardening.md) | Validate senders and constrain the dashboard-key relay | P1 | M | — | TODO |
 | [013](013-docs-truth-pass.md) | Make the repo's own documents tell the truth | P1 | S | — | TODO |
 | [014](014-sync-retry-recovery.md) | Stop a doomed first upload from permanently blocking an audit's save | P1 | S | — | TODO |
 | [015](015-audit-lifecycle-tests.md) | Characterization tests around the audit lifecycle | P1 | M | — | TODO |
 | [016](016-partial-audit-honesty.md) | Surface partial audits; make partial detection real | P2 | S | 015 | TODO |
-| [017](017-verify-engine-ships.md) | Fail the build loudly when the vendored engine is missing | P2 | S | — | TODO |
+| [017](017-verify-engine-ships.md) | Fail the build loudly when the vendored engine is missing | P2 | S | — | REJECTED — the finding's premise was disproven by the plan's own Step-1 reproduction (2026-08-06): with `public/vendor/axe.min.js` removed, `npm run build` already fails loudly (`[crx:manifest-post] ENOENT` from @crxjs/vite-plugin resolving the web_accessible_resources entry), so no silent engine-less zip can reach CI's package step. Residual gaps (hand-edited dist/, truncated-but-present engine file) judged too narrow to plan. No code changed |
 | [018](018-panel-self-audit.md) | Audit the auditor: engine run against the panel in smoke | P2 | S | — | TODO |
 | [019](019-local-export.md) | Local JSON export for keyless users | P3 | S–M | — (sequence after 016) | TODO |
-| [020](020-docs-corpus-expansion.md) | Expand the docs corpus beyond the v1 twenty | P3 | M–L | — | TODO |
+| [020](020-docs-corpus-expansion.md) | Expand the docs corpus beyond the v1 twenty | P3 | M–L | — | IN PROGRESS |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale)
 

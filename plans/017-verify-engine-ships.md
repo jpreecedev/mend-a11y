@@ -1,5 +1,12 @@
 # Plan 017: Fail the build loudly when the vendored engine is missing
 
+> **REJECTED 2026-08-06** — executed as far as Step 1, which disproved the
+> premise: `npm run build` already fails loudly without the engine
+> (`[crx:manifest-post] ENOENT: Could not load manifest asset
+> "vendor/axe.min.js"` from @crxjs/vite-plugin). The audit finding assumed a
+> silent pass; the reproduction showed a hard build failure, so CI cannot
+> ship an engine-less zip. Kept as the record; see plans/README.md.
+
 > **Executor instructions**: Follow this plan step by step. Run every
 > verification command and confirm the expected result before moving to the
 > next step. If anything in the "STOP conditions" section occurs, stop and
